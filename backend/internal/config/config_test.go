@@ -109,6 +109,12 @@ func TestLoadOverrides(t *testing.T) {
 	}
 }
 
+func TestDefaultHTTPAddrBindsToLoopback(t *testing.T) {
+	if defaultHTTPAddr != "127.0.0.1:8080" {
+		t.Fatalf("defaultHTTPAddr = %q, want %q", defaultHTTPAddr, "127.0.0.1:8080")
+	}
+}
+
 func TestLoadInvalidDuration(t *testing.T) {
 	t.Setenv("RUNNING_APP_REQUEST_TIMEOUT", "abc")
 

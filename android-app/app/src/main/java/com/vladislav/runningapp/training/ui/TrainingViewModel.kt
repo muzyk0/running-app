@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.core.di.DefaultDispatcher
+import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
+import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.training.WorkoutRepository
 import com.vladislav.runningapp.training.domain.Workout
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +35,7 @@ data class TrainingUiState(
 class TrainingViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val activityTracker: ActivityTracker,
+    private val trackingPermissionChecker: TrackingPermissionChecker,
     @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrainingUiState())
@@ -190,6 +193,12 @@ class TrainingViewModel @Inject constructor(
                 state.copy(
                     errorMessage = "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
                 )
+            }
+            return false
+        }
+        if (!trackingPermissionChecker.currentState().canStartTrackedSessions) {
+            _uiState.update { state ->
+                state.copy(errorMessage = MissingTrackedSessionPermissionsMessage)
             }
             return false
         }

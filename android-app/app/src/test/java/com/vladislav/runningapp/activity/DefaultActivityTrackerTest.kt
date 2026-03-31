@@ -2,6 +2,9 @@ package com.vladislav.runningapp.activity
 
 import com.vladislav.runningapp.activity.service.ActiveSessionServiceController
 import com.vladislav.runningapp.activity.service.LocationUpdatesClient
+import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
+import com.vladislav.runningapp.core.permissions.RequirementState
+import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
 import com.vladislav.runningapp.session.WorkoutSessionController
 import com.vladislav.runningapp.session.WorkoutSessionState
@@ -38,6 +41,7 @@ class DefaultActivityTrackerTest {
             },
             workoutSessionController = FakeWorkoutSessionController(),
             activeSessionServiceController = serviceController,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
             defaultDispatcher = mainDispatcherRule.dispatcher,
         )
 
@@ -53,6 +57,31 @@ class DefaultActivityTrackerTest {
         assertNull(tracker.trackerState.value.sessionId)
         assertEquals(1, serviceController.startCalls)
         assertEquals(1, serviceController.stopCalls)
+    }
+
+    @Test
+    fun startFreeRunDoesNothingWhenTrackingPermissionsAreMissing() = runTest(mainDispatcherRule.dispatcher) {
+        val serviceController = FakeActiveSessionServiceController()
+        val tracker = DefaultActivityTracker(
+            activityRepository = object : ActivityRepository {
+                override fun observeCompletedSessions(): Flow<List<CompletedActivitySession>> = emptyFlow()
+
+                override suspend fun saveCompletedSession(session: CompletedActivitySession) = Unit
+            },
+            locationUpdatesClient = object : LocationUpdatesClient {
+                override fun locationUpdates(): Flow<ActivityRoutePoint> = emptyFlow()
+            },
+            workoutSessionController = FakeWorkoutSessionController(),
+            activeSessionServiceController = serviceController,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = false),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        tracker.startFreeRun()
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        assertFalse(tracker.trackerState.value.isTracking)
+        assertEquals(0, serviceController.startCalls)
     }
 
     private class FakeWorkoutSessionController : WorkoutSessionController {
@@ -82,5 +111,19 @@ class DefaultActivityTrackerTest {
         override fun stop() {
             stopCalls += 1
         }
+    }
+
+    private class FixedTrackingPermissionChecker(
+        private val canStartTrackedSessions: Boolean,
+    ) : TrackingPermissionChecker {
+        override fun currentState(): PermissionRequirementsState = PermissionRequirementsState(
+            location = if (canStartTrackedSessions) {
+                RequirementState.Available
+            } else {
+                RequirementState.Missing
+            },
+            notifications = RequirementState.Available,
+            foregroundTracking = RequirementState.Available,
+        )
     }
 }

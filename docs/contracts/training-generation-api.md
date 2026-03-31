@@ -151,12 +151,12 @@ Current error codes:
 
 Backend runtime settings that affect this contract:
 
-- `RUNNING_APP_HTTP_ADDR`: bind address, default `:8080`
+- `RUNNING_APP_HTTP_ADDR`: bind address, default `127.0.0.1:8080`
 - `RUNNING_APP_PROVIDER`: `codex` or `static`
 - `RUNNING_APP_REQUEST_TIMEOUT`: total request timeout, default `12s`
 - `RUNNING_APP_CODEX_BINARY`, `RUNNING_APP_CODEX_WORKDIR`, `RUNNING_APP_CODEX_MODEL`, `RUNNING_APP_CODEX_PROFILE`, `RUNNING_APP_CODEX_SANDBOX`: provider-specific Codex CLI settings
 
-For local Android builds, the backend base URL is passed through the Gradle property `runningAppTrainingApiBaseUrl`. The emulator-friendly default remains `http://10.0.2.2:8080/`.
+For local Android builds, the backend base URL is passed through the Gradle property `runningAppTrainingApiBaseUrl`. The emulator-friendly default remains `http://10.0.2.2:8080/`. Cleartext transport is allowed only in debug builds; release builds must use HTTPS.
 
 ## Deployment Modes
 

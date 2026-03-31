@@ -3,6 +3,10 @@ package com.vladislav.runningapp.training.ui
 import com.vladislav.runningapp.activity.ActivitySessionType
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.ActivityTrackerState
+import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
+import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
+import com.vladislav.runningapp.core.permissions.RequirementState
+import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
 import com.vladislav.runningapp.training.WorkoutRepository
 import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
@@ -37,6 +41,7 @@ class TrainingViewModelTest {
         val viewModel = TrainingViewModel(
             workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
             activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
             defaultDispatcher = mainDispatcherRule.dispatcher,
         )
 
@@ -55,6 +60,7 @@ class TrainingViewModelTest {
         val viewModel = TrainingViewModel(
             workoutRepository = FakeWorkoutRepository(saveError = IllegalStateException("disk full")),
             activityTracker = FakeActivityTracker(),
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
             defaultDispatcher = mainDispatcherRule.dispatcher,
         )
 
@@ -83,6 +89,7 @@ class TrainingViewModelTest {
                 saveError = IllegalStateException("disk full"),
             ),
             activityTracker = FakeActivityTracker(),
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
             defaultDispatcher = mainDispatcherRule.dispatcher,
         )
 
@@ -92,6 +99,26 @@ class TrainingViewModelTest {
 
         assertEquals(
             "Не удалось создать копию тренировки локально. Повторите попытку.",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun startSelectedWorkoutReturnsFalseWhenTrackingPermissionsAreMissing() = runTest(mainDispatcherRule.dispatcher) {
+        val tracker = FakeActivityTracker()
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
+            activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = false),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.onStartSelectedWorkout())
+        assertTrue(tracker.startedWorkouts.isEmpty())
+        assertEquals(
+            MissingTrackedSessionPermissionsMessage,
             viewModel.uiState.value.errorMessage,
         )
     }
@@ -146,6 +173,20 @@ class TrainingViewModelTest {
         override fun stopActiveSession() {
             mutableState.value = ActivityTrackerState()
         }
+    }
+
+    private class FixedTrackingPermissionChecker(
+        private val canStartTrackedSessions: Boolean,
+    ) : TrackingPermissionChecker {
+        override fun currentState(): PermissionRequirementsState = PermissionRequirementsState(
+            location = if (canStartTrackedSessions) {
+                RequirementState.Available
+            } else {
+                RequirementState.Missing
+            },
+            notifications = RequirementState.Available,
+            foregroundTracking = RequirementState.Available,
+        )
     }
 }
 

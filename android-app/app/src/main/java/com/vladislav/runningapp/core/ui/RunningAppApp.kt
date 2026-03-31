@@ -194,6 +194,7 @@ private fun ReadyAppShell(
                 RunningAppNavHost(
                     navController = navController,
                     startDestination = startDestination,
+                    canStartTrackedSessions = permissionsState.canStartTrackedSessions,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

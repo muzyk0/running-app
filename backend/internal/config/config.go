@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultHTTPAddr          = ":8080"
+	defaultHTTPAddr          = "127.0.0.1:8080"
 	defaultProvider          = "codex"
 	defaultRequestTimeout    = 12 * time.Second
 	defaultShutdownTimeout   = 10 * time.Second

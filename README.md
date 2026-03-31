@@ -47,7 +47,7 @@ export JAVA_HOME="$(
 
 ## Backend: Local Run
 
-The backend defaults to `:8080` and the `codex` provider. For repeatable local testing without the Codex CLI, use the static provider:
+The backend defaults to `127.0.0.1:8080` and the `codex` provider, so fresh local runs stay bound to loopback instead of every interface. For repeatable local testing without the Codex CLI, use the static provider:
 
 ```bash
 cd backend
@@ -57,7 +57,7 @@ go run ./cmd/server
 
 Required and optional backend environment variables:
 
-- `RUNNING_APP_HTTP_ADDR`: listen address, default `:8080`
+- `RUNNING_APP_HTTP_ADDR`: listen address, default `127.0.0.1:8080`
 - `RUNNING_APP_PROVIDER`: `codex` or `static`, default `codex`
 - `RUNNING_APP_REQUEST_TIMEOUT`: generation timeout, default `12s`
 - `RUNNING_APP_SHUTDOWN_TIMEOUT`: graceful shutdown timeout, default `10s`
@@ -74,7 +74,7 @@ Required and optional backend environment variables:
 
 ## Android: Local Run
 
-The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine.
+The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine. Cleartext traffic is allowed only in debug builds; release builds require an HTTPS backend URL.
 
 Foreground session tracking features also require granting runtime location permission and, on Android 13+, notification permission.
 
@@ -90,6 +90,7 @@ cd android-app
 For a physical device, point the property at a reachable host, for example:
 
 ```bash
+export RUNNING_APP_HTTP_ADDR=0.0.0.0:8080
 ./gradlew app:assembleDebug \
   -PrunningAppTrainingApiBaseUrl=http://192.168.1.50:8080/
 ```
@@ -130,6 +131,7 @@ Container image:
 cd backend
 docker build -t running-app-backend .
 docker run --rm -p 8080:8080 \
+  -e RUNNING_APP_HTTP_ADDR=:8080 \
   -e RUNNING_APP_PROVIDER=static \
   running-app-backend
 ```

@@ -43,6 +43,7 @@ import com.vladislav.runningapp.training.domain.WorkoutStepType
 fun TrainingScreen(
     focusedWorkoutId: String? = null,
     onOpenActiveSession: () -> Unit,
+    canStartTrackedSessions: Boolean,
     viewModel: TrainingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,6 +54,7 @@ fun TrainingScreen(
 
     TrainingScreen(
         state = uiState,
+        canStartTrackedSessions = canStartTrackedSessions,
         onSelectWorkout = viewModel::onSelectWorkout,
         onCreateWorkout = viewModel::onCreateWorkout,
         onEditWorkout = viewModel::onEditSelectedWorkout,
@@ -82,6 +84,7 @@ fun TrainingScreen(
 @Composable
 private fun TrainingScreen(
     state: TrainingUiState,
+    canStartTrackedSessions: Boolean,
     onSelectWorkout: (String) -> Unit,
     onCreateWorkout: () -> Unit,
     onEditWorkout: () -> Unit,
@@ -171,6 +174,7 @@ private fun TrainingScreen(
                 val selectedWorkout = requireNotNull(state.selectedWorkout)
                 WorkoutDetailCard(
                     workout = selectedWorkout,
+                    canStartTrackedSessions = canStartTrackedSessions,
                     onEditWorkout = onEditWorkout,
                     onSaveCopy = onSaveCopy,
                     onStartWorkout = onStartWorkout,
@@ -328,6 +332,7 @@ private fun EmptyWorkoutsCard(
 @Composable
 private fun WorkoutDetailCard(
     workout: Workout,
+    canStartTrackedSessions: Boolean,
     onEditWorkout: () -> Unit,
     onSaveCopy: () -> Unit,
     onStartWorkout: () -> Unit,
@@ -415,12 +420,22 @@ private fun WorkoutDetailCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Button(onClick = onStartWorkout) {
+                    Button(
+                        onClick = onStartWorkout,
+                        enabled = canStartTrackedSessions,
+                    ) {
                         Text(text = stringResource(R.string.training_start_action))
                     }
                     OutlinedButton(onClick = onEditWorkout) {
                         Text(text = stringResource(R.string.training_edit_action))
                     }
+                }
+                if (!canStartTrackedSessions) {
+                    Text(
+                        text = stringResource(R.string.permissions_summary_missing),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),

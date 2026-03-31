@@ -37,12 +37,20 @@ abstract class AiModule {
 object AiNetworkModule {
     @Provides
     @TrainingApiBaseUrl
-    fun provideTrainingApiBaseUrl(): String = BuildConfig.TRAINING_API_BASE_URL
-        .trim()
-        .ifEmpty { "http://10.0.2.2:8080/" }
-        .let { value ->
-            if (value.endsWith("/")) value else "$value/"
+    fun provideTrainingApiBaseUrl(): String {
+        val normalizedBaseUrl = BuildConfig.TRAINING_API_BASE_URL
+            .trim()
+            .ifEmpty { "http://10.0.2.2:8080/" }
+            .let { value ->
+                if (value.endsWith("/")) value else "$value/"
+            }
+
+        check(BuildConfig.DEBUG || !normalizedBaseUrl.startsWith("http://")) {
+            "Release builds require an HTTPS training API base URL."
         }
+
+        return normalizedBaseUrl
+    }
 
     @Provides
     @Singleton

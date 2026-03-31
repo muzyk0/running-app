@@ -24,8 +24,8 @@ class AndroidActiveSessionServiceController @Inject constructor(
     }
 
     override fun stop() {
-        context.startService(
-            ActiveSessionService.createIntent(context, ActiveSessionService.Action.Stop),
+        context.stopService(
+            ActiveSessionService.createIntent(context, ActiveSessionService.Action.Start),
         )
     }
 }

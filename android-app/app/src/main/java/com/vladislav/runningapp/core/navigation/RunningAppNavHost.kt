@@ -21,6 +21,7 @@ import com.vladislav.runningapp.training.ui.trainingRoute
 fun RunningAppNavHost(
     navController: NavHostController,
     startDestination: TopLevelDestination,
+    canStartTrackedSessions: Boolean,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -43,6 +44,7 @@ fun RunningAppNavHost(
         ) { backStackEntry ->
             TrainingScreen(
                 focusedWorkoutId = backStackEntry.arguments?.getString(FocusedWorkoutIdArg),
+                canStartTrackedSessions = canStartTrackedSessions,
                 onOpenActiveSession = {
                     navController.navigate(TopLevelDestination.ActiveSession.route) {
                         launchSingleTop = true
@@ -84,6 +86,7 @@ fun RunningAppNavHost(
         }
         composable(TopLevelDestination.FreeRun.route) {
             FreeRunScreen(
+                canStartTrackedSessions = canStartTrackedSessions,
                 onOpenActiveSession = {
                     navController.navigate(TopLevelDestination.ActiveSession.route) {
                         launchSingleTop = true

@@ -54,12 +54,6 @@ class ActiveSessionService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        if (intent?.action == Action.Stop.value) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            isForegroundStarted = false
-            stopSelf()
-            return START_NOT_STICKY
-        }
         val state = activityTracker.trackerState.value
         if (state.isTracking && !isForegroundStarted) {
             startForeground(
@@ -72,6 +66,10 @@ class ActiveSessionService : Service() {
     }
 
     override fun onDestroy() {
+        if (isForegroundStarted) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            isForegroundStarted = false
+        }
         collectionJob?.cancel()
         scope.coroutineContext[Job]?.cancel()
         super.onDestroy()
@@ -83,7 +81,6 @@ class ActiveSessionService : Service() {
         val value: String,
     ) {
         Start("com.vladislav.runningapp.action.START_ACTIVE_SESSION_SERVICE"),
-        Stop("com.vladislav.runningapp.action.STOP_ACTIVE_SESSION_SERVICE"),
     }
 
     companion object {

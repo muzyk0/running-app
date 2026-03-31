@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -30,12 +31,15 @@ import com.vladislav.runningapp.activity.formatPaceLabel
 @Composable
 fun FreeRunScreen(
     onOpenActiveSession: () -> Unit,
+    canStartTrackedSessions: Boolean,
     viewModel: FreeRunViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FreeRunScreen(
-        state = uiState,
+        state = uiState.trackerState,
+        errorMessage = uiState.errorMessage,
+        canStartTrackedSessions = canStartTrackedSessions,
         onStartFreeRun = viewModel::onStartFreeRun,
         onStopFreeRun = viewModel::onStopFreeRun,
         onOpenActiveSession = onOpenActiveSession,
@@ -45,6 +49,8 @@ fun FreeRunScreen(
 @Composable
 private fun FreeRunScreen(
     state: ActivityTrackerState,
+    errorMessage: String?,
+    canStartTrackedSessions: Boolean,
     onStartFreeRun: () -> Unit,
     onStopFreeRun: () -> Unit,
     onOpenActiveSession: () -> Unit,
@@ -56,6 +62,10 @@ private fun FreeRunScreen(
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        errorMessage?.let { message ->
+            InlineErrorCard(message = message)
+        }
+
         Card {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -85,13 +95,17 @@ private fun FreeRunScreen(
                 onStopFreeRun = onStopFreeRun,
             )
 
-            else -> FreeRunStartCard(onStartFreeRun = onStartFreeRun)
+            else -> FreeRunStartCard(
+                canStartTrackedSessions = canStartTrackedSessions,
+                onStartFreeRun = onStartFreeRun,
+            )
         }
     }
 }
 
 @Composable
 private fun FreeRunStartCard(
+    canStartTrackedSessions: Boolean,
     onStartFreeRun: () -> Unit,
 ) {
     Card {
@@ -109,10 +123,36 @@ private fun FreeRunStartCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = onStartFreeRun) {
+            Button(
+                onClick = onStartFreeRun,
+                enabled = canStartTrackedSessions,
+            ) {
                 Text(text = stringResource(R.string.free_run_start_action))
             }
+            if (!canStartTrackedSessions) {
+                Text(
+                    text = stringResource(R.string.permissions_summary_missing),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun InlineErrorCard(message: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(20.dp),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

@@ -7,6 +7,7 @@ import com.vladislav.runningapp.activity.service.ActivityPointFilter
 import com.vladislav.runningapp.activity.service.LocationUpdatesClient
 import com.vladislav.runningapp.activity.service.calculateAveragePaceSecPerKm
 import com.vladislav.runningapp.core.di.DefaultDispatcher
+import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.session.WorkoutSessionController
 import com.vladislav.runningapp.session.WorkoutSessionStatus
 import com.vladislav.runningapp.training.domain.Workout
@@ -34,6 +35,7 @@ class DefaultActivityTracker @Inject constructor(
     private val locationUpdatesClient: LocationUpdatesClient,
     private val workoutSessionController: WorkoutSessionController,
     private val activeSessionServiceController: ActiveSessionServiceController,
+    private val trackingPermissionChecker: TrackingPermissionChecker,
     @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
 ) : ActivityTracker {
     private val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
@@ -57,6 +59,9 @@ class DefaultActivityTracker @Inject constructor(
     }
 
     override fun startFreeRun() {
+        if (!trackingPermissionChecker.currentState().canStartTrackedSessions) {
+            return
+        }
         scope.launch {
             mutationMutex.withLock {
                 if (mutableTrackerState.value.isTracking) {
@@ -76,6 +81,9 @@ class DefaultActivityTracker @Inject constructor(
     }
 
     override fun startPlannedWorkout(workout: Workout) {
+        if (!trackingPermissionChecker.currentState().canStartTrackedSessions) {
+            return
+        }
         scope.launch {
             mutationMutex.withLock {
                 if (mutableTrackerState.value.isTracking) {

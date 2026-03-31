@@ -8,6 +8,8 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.vladislav.runningapp.activity.data.local.ActivityDao
 import com.vladislav.runningapp.core.navigation.TopLevelDestination
+import com.vladislav.runningapp.core.permissions.AndroidTrackingPermissionChecker
+import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.core.storage.AppDatabase
 import com.vladislav.runningapp.core.storage.ProfileDao
 import com.vladislav.runningapp.training.data.local.WorkoutDao
@@ -64,6 +66,12 @@ object AppModule {
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
         produceFile = { context.preferencesDataStoreFile("running-app.preferences_pb") },
     )
+
+    @Provides
+    @Singleton
+    fun provideTrackingPermissionChecker(
+        @ApplicationContext context: Context,
+    ): TrackingPermissionChecker = AndroidTrackingPermissionChecker(context)
 
     @Provides
     @Singleton
