@@ -2,7 +2,7 @@ package com.vladislav.runningapp.ai.ui
 
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
 import com.vladislav.runningapp.ai.domain.TrainingGenerationRepository
-import com.vladislav.runningapp.ai.domain.TrainingGenerationResult
+import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
 import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
@@ -40,10 +40,10 @@ class GenerationViewModelTest {
             workoutRepository = workoutRepository,
             generateWorkoutUseCase = GenerateWorkoutUseCase(
                 repository = object : TrainingGenerationRepository {
-                    override suspend fun generateWorkout(
+                    override fun generateWorkout(
                         profile: UserProfile,
                         userNote: String?,
-                    ): TrainingGenerationResult = TrainingGenerationResult.Success(generatedWorkout)
+                    ): Flow<TrainingGenerationUpdate> = flowOf(TrainingGenerationUpdate.Completed(generatedWorkout))
                 },
             ),
             defaultDispatcher = mainDispatcherRule.dispatcher,
@@ -74,10 +74,10 @@ class GenerationViewModelTest {
             workoutRepository = FakeWorkoutRepository(),
             generateWorkoutUseCase = GenerateWorkoutUseCase(
                 repository = object : TrainingGenerationRepository {
-                    override suspend fun generateWorkout(
+                    override fun generateWorkout(
                         profile: UserProfile,
                         userNote: String?,
-                    ): TrainingGenerationResult = error("generateWorkout should not be called without a profile")
+                    ): Flow<TrainingGenerationUpdate> = error("generateWorkout should not be called without a profile")
                 },
             ),
             defaultDispatcher = mainDispatcherRule.dispatcher,
@@ -99,13 +99,15 @@ class GenerationViewModelTest {
             workoutRepository = FakeWorkoutRepository(),
             generateWorkoutUseCase = GenerateWorkoutUseCase(
                 repository = object : TrainingGenerationRepository {
-                    override suspend fun generateWorkout(
+                    override fun generateWorkout(
                         profile: UserProfile,
                         userNote: String?,
-                    ): TrainingGenerationResult = TrainingGenerationResult.Failure(
-                        error = com.vladislav.runningapp.ai.domain.TrainingGenerationError(
-                            code = com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode.ProviderError,
-                            message = "provider failed",
+                    ): Flow<TrainingGenerationUpdate> = flowOf(
+                        TrainingGenerationUpdate.Failure(
+                            error = com.vladislav.runningapp.ai.domain.TrainingGenerationError(
+                                code = com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode.ProviderError,
+                                message = "provider failed",
+                            ),
                         ),
                     )
                 },
@@ -129,10 +131,12 @@ class GenerationViewModelTest {
             workoutRepository = workoutRepository,
             generateWorkoutUseCase = GenerateWorkoutUseCase(
                 repository = object : TrainingGenerationRepository {
-                    override suspend fun generateWorkout(
+                    override fun generateWorkout(
                         profile: UserProfile,
                         userNote: String?,
-                    ): TrainingGenerationResult = TrainingGenerationResult.Success(sampleGeneratedWorkout())
+                    ): Flow<TrainingGenerationUpdate> = flowOf(
+                        TrainingGenerationUpdate.Completed(sampleGeneratedWorkout()),
+                    )
                 },
             ),
             defaultDispatcher = mainDispatcherRule.dispatcher,

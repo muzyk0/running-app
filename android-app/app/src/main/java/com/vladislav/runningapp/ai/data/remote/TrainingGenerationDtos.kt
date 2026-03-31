@@ -44,6 +44,11 @@ data class GenerateTrainingRequestContextDto(
     val userNote: String? = null,
 )
 
+data class TrainingGenerationLogEventDto(
+    @SerializedName("message")
+    val message: String,
+)
+
 data class GenerateTrainingResponseDto(
     @SerializedName("schema_version")
     val schemaVersion: String,
@@ -88,3 +93,17 @@ data class ApiErrorDto(
     @SerializedName("message")
     val message: String? = null,
 )
+
+sealed interface RemoteTrainingGenerationStreamEventDto {
+    data class Log(
+        val payload: TrainingGenerationLogEventDto,
+    ) : RemoteTrainingGenerationStreamEventDto
+
+    data class Completed(
+        val payload: GenerateTrainingResponseDto,
+    ) : RemoteTrainingGenerationStreamEventDto
+
+    data class Error(
+        val payload: ApiErrorEnvelopeDto,
+    ) : RemoteTrainingGenerationStreamEventDto
+}

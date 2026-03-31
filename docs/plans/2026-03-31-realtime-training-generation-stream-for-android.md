@@ -61,11 +61,11 @@ Convert training generation from a one-shot JSON response into a streamed reques
 - Modify: `android-app/app/src/test/java/com/vladislav/runningapp/ai/data/remote/RemoteTrainingGenerationRepositoryTest.kt`
 - Modify: `android-app/app/src/test/java/com/vladislav/runningapp/ai/data/remote/TrainingGenerationApiServiceTest.kt`
 
-- [ ] Change the repository and use-case contract from a single `TrainingGenerationResult` into a streamed sequence of generation updates so UI can observe raw log chunks and the terminal workout separately
-- [ ] Update the Retrofit service to read the successful response as a raw streamed body, parse SSE events incrementally, and map `completed` back into the existing workout DTO and domain mapper
-- [ ] Preserve current HTTP error-body mapping for non-success responses so validation, network, and provider errors still surface with consistent domain errors
-- [ ] Write or update tests with `MockWebServer` chunked SSE bodies covering log chunks, terminal completion, and terminal error events
-- [ ] run `cd android-app && ./gradlew --no-daemon app:testDebugUnitTest`
+- [x] Change the repository and use-case contract from a single `TrainingGenerationResult` into a streamed sequence of generation updates so UI can observe raw log chunks and the terminal workout separately
+- [x] Update the Retrofit service to read the successful response as a raw streamed body, parse SSE events incrementally, and map `completed` back into the existing workout DTO and domain mapper
+- [x] Preserve current HTTP error-body mapping for non-success responses so validation, network, and provider errors still surface with consistent domain errors
+- [x] Write or update tests with `MockWebServer` chunked SSE bodies covering log chunks, terminal completion, and terminal error events
+- [x] run `cd android-app && ./gradlew --no-daemon app:testDebugUnitTest`
 
 ### Task 4: Surface raw generation output in the Android screen and only reveal the workout on completion
 

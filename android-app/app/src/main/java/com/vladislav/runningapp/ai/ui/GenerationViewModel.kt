@@ -3,7 +3,7 @@ package com.vladislav.runningapp.ai.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
-import com.vladislav.runningapp.ai.domain.TrainingGenerationResult
+import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.core.di.DefaultDispatcher
 import com.vladislav.runningapp.profile.ProfileRepository
 import com.vladislav.runningapp.profile.UserProfile
@@ -107,23 +107,27 @@ class GenerationViewModel @Inject constructor(
         }
 
         viewModelScope.launch(defaultDispatcher) {
-            when (val result = generateWorkoutUseCase(profile, currentState.userNote)) {
-                is TrainingGenerationResult.Success -> {
-                    _uiState.update { state ->
-                        state.copy(
-                            isGenerating = false,
-                            generatedWorkout = result.workout,
-                            errorMessage = null,
-                        )
-                    }
-                }
+            generateWorkoutUseCase(profile, currentState.userNote).collect { update ->
+                when (update) {
+                    is TrainingGenerationUpdate.Log -> Unit
 
-                is TrainingGenerationResult.Failure -> {
-                    _uiState.update { state ->
-                        state.copy(
-                            isGenerating = false,
-                            errorMessage = result.error.message,
-                        )
+                    is TrainingGenerationUpdate.Completed -> {
+                        _uiState.update { state ->
+                            state.copy(
+                                isGenerating = false,
+                                generatedWorkout = update.workout,
+                                errorMessage = null,
+                            )
+                        }
+                    }
+
+                    is TrainingGenerationUpdate.Failure -> {
+                        _uiState.update { state ->
+                            state.copy(
+                                isGenerating = false,
+                                errorMessage = update.error.message,
+                            )
+                        }
                     }
                 }
             }

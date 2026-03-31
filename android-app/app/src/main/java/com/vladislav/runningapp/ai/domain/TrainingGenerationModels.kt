@@ -17,12 +17,16 @@ data class TrainingGenerationError(
     val message: String,
 )
 
-sealed interface TrainingGenerationResult {
-    data class Success(
+sealed interface TrainingGenerationUpdate {
+    data class Log(
+        val message: String,
+    ) : TrainingGenerationUpdate
+
+    data class Completed(
         val workout: Workout,
-    ) : TrainingGenerationResult
+    ) : TrainingGenerationUpdate
 
     data class Failure(
         val error: TrainingGenerationError,
-    ) : TrainingGenerationResult
+    ) : TrainingGenerationUpdate
 }
