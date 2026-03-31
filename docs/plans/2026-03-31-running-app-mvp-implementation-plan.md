@@ -177,13 +177,13 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `backend/deploy/systemd/running-app-backend.service`
 - Create: `docs/contracts/training-generation-api.md`
 
-- [ ] Scaffold the Go service with `cmd/server` and compact `internal` packages
-- [ ] Implement `GET /healthz` and `POST /v1/trainings/generate` request routing with JSON input/output
-- [ ] Add config loading from environment, request timeouts, structured logs, and graceful shutdown
-- [ ] Support both local binary execution and containerized execution from the start
-- [ ] Write the authoritative client/backend contract doc with request and response examples
-- [ ] Add handler and config tests
-- [ ] Run `cd backend && go test ./...`
+- [x] Scaffold the Go service with `cmd/server` and compact `internal` packages
+- [x] Implement `GET /healthz` and `POST /v1/trainings/generate` request routing with JSON input/output
+- [x] Add config loading from environment, request timeouts, structured logs, and graceful shutdown
+- [x] Support both local binary execution and containerized execution from the start
+- [x] Write the authoritative client/backend contract doc with request and response examples
+- [x] Add handler and config tests
+- [x] Run `cd backend && go test ./...`
 
 ### Task 8: Codex CLI Provider, Prompt Assembly, And Schema Normalization
 

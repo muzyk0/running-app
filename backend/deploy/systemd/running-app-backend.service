@@ -1,0 +1,22 @@
+[Unit]
+Description=Running App backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=running-app
+Group=running-app
+WorkingDirectory=/opt/running-app/backend
+EnvironmentFile=-/etc/running-app/backend.env
+ExecStart=/usr/local/bin/running-app-backend
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/running-app
+
+[Install]
+WantedBy=multi-user.target
