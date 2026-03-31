@@ -157,13 +157,13 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/activity/ui/`
 - Create: `android-app/app/src/test/java/<package>/activity/`
 
-- [ ] Implement one foreground `ActiveSessionService` with a persistent notification for both free runs and planned workouts
-- [ ] Integrate Fused Location Provider and store accepted route points, distance, duration, and average pace locally
-- [ ] Create Room entities for activity sessions and GPS points, including links to a workout when the session was planned
-- [ ] Build free-run start/stop flow and history screens for completed activities
-- [ ] Reuse the same session persistence model for planned and free activities to avoid duplicate tracking logic
-- [ ] Add tests for point filtering, distance calculation, pace calculation, and session persistence
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Implement one foreground `ActiveSessionService` with a persistent notification for both free runs and planned workouts
+- [x] Integrate Fused Location Provider and store accepted route points, distance, duration, and average pace locally
+- [x] Create Room entities for activity sessions and GPS points, including links to a workout when the session was planned
+- [x] Build free-run start/stop flow and history screens for completed activities
+- [x] Reuse the same session persistence model for planned and free activities to avoid duplicate tracking logic
+- [x] Add tests for point filtering, distance calculation, pace calculation, and session persistence
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 7: Backend HTTP Service, Config, Packaging, And Contract Docs
 

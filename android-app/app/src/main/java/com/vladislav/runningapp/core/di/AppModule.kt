@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import com.vladislav.runningapp.activity.data.local.ActivityDao
 import com.vladislav.runningapp.core.navigation.TopLevelDestination
 import com.vladislav.runningapp.core.startup.DefaultStartupDestinationResolver
 import com.vladislav.runningapp.core.startup.StartupDestinationResolver
@@ -63,6 +64,11 @@ object AppModule {
     fun provideWorkoutDao(
         appDatabase: AppDatabase,
     ): WorkoutDao = appDatabase.workoutDao()
+
+    @Provides
+    fun provideActivityDao(
+        appDatabase: AppDatabase,
+    ): ActivityDao = appDatabase.activityDao()
 
     @Provides
     @Singleton

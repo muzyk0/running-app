@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vladislav.runningapp.R
-import com.vladislav.runningapp.session.WorkoutSessionState
+import com.vladislav.runningapp.activity.formatDistanceLabel
+import com.vladislav.runningapp.activity.formatDurationLabel
+import com.vladislav.runningapp.activity.formatPaceLabel
 import com.vladislav.runningapp.session.WorkoutSessionStatus
 import com.vladislav.runningapp.training.domain.WorkoutStepType
 
@@ -46,13 +48,13 @@ fun ActiveSessionScreen(
 
 @Composable
 private fun ActiveSessionScreen(
-    state: WorkoutSessionState,
+    state: ActiveWorkoutUiState,
     onOpenTraining: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
 ) {
-    if (state.workout == null) {
+    if (!state.hasPlannedWorkoutSession) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -72,7 +74,7 @@ private fun ActiveSessionScreen(
     ) {
         SessionOverviewCard(state = state)
 
-        state.currentStep?.let { step ->
+        state.workoutSessionState.currentStep?.let { step ->
             CurrentStepCard(
                 state = state,
                 stepType = step.type,
@@ -80,7 +82,9 @@ private fun ActiveSessionScreen(
             )
         }
 
-        state.lastCuePrompt?.let { prompt ->
+        TrackingMetricsCard(state = state)
+
+        state.workoutSessionState.lastCuePrompt?.let { prompt ->
             Card {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -93,6 +97,26 @@ private fun ActiveSessionScreen(
                     )
                     Text(
                         text = prompt,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (state.trackingState.isCompleted) {
+            Card {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.active_session_saved_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = stringResource(R.string.active_session_saved_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -137,9 +161,9 @@ private fun EmptyActiveSessionCard(
 
 @Composable
 private fun SessionOverviewCard(
-    state: WorkoutSessionState,
+    state: ActiveWorkoutUiState,
 ) {
-    val workout = requireNotNull(state.workout)
+    val workout = requireNotNull(state.workoutSessionState.workout)
 
     Card {
         Column(
@@ -163,8 +187,8 @@ private fun SessionOverviewCard(
                     Text(
                         text = stringResource(
                             R.string.active_session_step_counter,
-                            state.currentStepNumber,
-                            state.totalSteps,
+                            state.workoutSessionState.currentStepNumber,
+                            state.workoutSessionState.totalSteps,
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -173,7 +197,7 @@ private fun SessionOverviewCard(
                 AssistChip(
                     onClick = {},
                     label = {
-                        Text(text = stringResource(state.status.labelRes()))
+                        Text(text = stringResource(state.workoutSessionState.status.labelRes()))
                     },
                 )
             }
@@ -185,17 +209,17 @@ private fun SessionOverviewCard(
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.active_session_elapsed_label),
-                    value = formatDuration(state.totalElapsedSec),
+                    value = formatDurationLabel(state.workoutSessionState.totalElapsedSec),
                 )
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.active_session_remaining_label),
-                    value = formatDuration(state.currentStepRemainingSec),
+                    value = formatDurationLabel(state.workoutSessionState.currentStepRemainingSec),
                 )
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.active_session_total_label),
-                    value = formatDuration(state.totalDurationSec),
+                    value = formatDurationLabel(state.workoutSessionState.totalDurationSec),
                 )
             }
         }
@@ -204,7 +228,7 @@ private fun SessionOverviewCard(
 
 @Composable
 private fun CurrentStepCard(
-    state: WorkoutSessionState,
+    state: ActiveWorkoutUiState,
     stepType: WorkoutStepType,
     voicePrompt: String,
 ) {
@@ -226,8 +250,8 @@ private fun CurrentStepCard(
             Text(
                 text = stringResource(
                     R.string.active_session_current_step_meta,
-                    formatDuration(state.currentStepRemainingSec),
-                    formatDuration(state.totalElapsedSec),
+                    formatDurationLabel(state.workoutSessionState.currentStepRemainingSec),
+                    formatDurationLabel(state.workoutSessionState.totalElapsedSec),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -241,8 +265,46 @@ private fun CurrentStepCard(
 }
 
 @Composable
+private fun TrackingMetricsCard(
+    state: ActiveWorkoutUiState,
+) {
+    Card {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.active_session_tracking_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.active_session_tracking_distance),
+                    value = formatDistanceLabel(state.trackingState.distanceMeters),
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.active_session_tracking_pace),
+                    value = formatPaceLabel(state.trackingState.averagePaceSecPerKm),
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.active_session_tracking_points),
+                    value = state.trackingState.routePoints.size.toString(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SessionControlsRow(
-    state: WorkoutSessionState,
+    state: ActiveWorkoutUiState,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
@@ -254,17 +316,17 @@ private fun SessionControlsRow(
                 .padding(20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (state.canPause) {
+            if (state.workoutSessionState.canPause) {
                 Button(onClick = onPause) {
                     Text(text = stringResource(R.string.active_session_pause_action))
                 }
             }
-            if (state.canResume) {
+            if (state.workoutSessionState.canResume) {
                 Button(onClick = onResume) {
                     Text(text = stringResource(R.string.active_session_resume_action))
                 }
             }
-            if (state.canStop) {
+            if (state.trackingState.hasSession) {
                 OutlinedButton(onClick = onStop) {
                     Text(text = stringResource(R.string.active_session_stop_action))
                 }
@@ -311,14 +373,4 @@ private fun WorkoutStepType.labelRes(): Int = when (this) {
     WorkoutStepType.Walk -> R.string.training_step_type_walk
     WorkoutStepType.Cooldown -> R.string.training_step_type_cooldown
     WorkoutStepType.Rest -> R.string.training_step_type_rest
-}
-
-private fun formatDuration(totalDurationSec: Int): String {
-    val minutes = totalDurationSec / 60
-    val seconds = totalDurationSec % 60
-    return when {
-        minutes > 0 && seconds > 0 -> "$minutes мин $seconds с"
-        minutes > 0 -> "$minutes мин"
-        else -> "$seconds с"
-    }
 }

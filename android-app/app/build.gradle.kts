@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.google.material)
+    implementation(libs.google.play.services.location)
     implementation(libs.hilt.android)
     kapt(libs.androidx.room.compiler)
     kapt(libs.hilt.compiler)

@@ -2,8 +2,8 @@ package com.vladislav.runningapp.training.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.core.di.DefaultDispatcher
-import com.vladislav.runningapp.session.WorkoutSessionController
 import com.vladislav.runningapp.training.WorkoutRepository
 import com.vladislav.runningapp.training.domain.Workout
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +30,7 @@ data class TrainingUiState(
 @HiltViewModel
 class TrainingViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
-    private val workoutSessionController: WorkoutSessionController,
+    private val activityTracker: ActivityTracker,
     @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrainingUiState())
@@ -139,7 +139,7 @@ class TrainingViewModel @Inject constructor(
 
     fun onStartSelectedWorkout() {
         val selectedWorkout = _uiState.value.selectedWorkout ?: return
-        workoutSessionController.startWorkout(selectedWorkout)
+        activityTracker.startPlannedWorkout(selectedWorkout)
     }
 
     fun onSaveWorkout() {

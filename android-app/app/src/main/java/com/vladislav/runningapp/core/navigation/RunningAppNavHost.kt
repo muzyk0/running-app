@@ -6,8 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vladislav.runningapp.ai.GenerationScreen
-import com.vladislav.runningapp.activity.FreeRunScreen
-import com.vladislav.runningapp.activity.HistoryScreen
+import com.vladislav.runningapp.activity.ui.FreeRunScreen
+import com.vladislav.runningapp.activity.ui.HistoryScreen
 import com.vladislav.runningapp.profile.ProfileScreen
 import com.vladislav.runningapp.session.ui.ActiveSessionScreen
 import com.vladislav.runningapp.training.ui.TrainingScreen
@@ -49,7 +49,14 @@ fun RunningAppNavHost(
             )
         }
         composable(TopLevelDestination.FreeRun.route) {
-            FreeRunScreen()
+            FreeRunScreen(
+                onOpenActiveSession = {
+                    navController.navigate(TopLevelDestination.ActiveSession.route) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
         composable(TopLevelDestination.History.route) {
             HistoryScreen()
