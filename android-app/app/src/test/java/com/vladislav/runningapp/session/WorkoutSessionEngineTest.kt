@@ -107,6 +107,32 @@ class WorkoutSessionEngineTest {
         assertEquals(1, progressedState.currentStepElapsedSec)
     }
 
+    @Test
+    fun stopResetsSessionToIdle() {
+        val startedState = WorkoutSessionEngine.reduce(
+            state = WorkoutSessionState(),
+            action = WorkoutSessionAction.Start(sampleWorkout()),
+        ).state
+
+        val stoppedState = WorkoutSessionEngine.reduce(
+            state = startedState,
+            action = WorkoutSessionAction.Stop,
+        ).state
+
+        assertEquals(WorkoutSessionState(), stoppedState)
+    }
+
+    @Test
+    fun startWithEmptyWorkoutReturnsIdleStateWithoutEffects() {
+        val transition = WorkoutSessionEngine.reduce(
+            state = WorkoutSessionState(),
+            action = WorkoutSessionAction.Start(sampleWorkout().copy(steps = emptyList())),
+        )
+
+        assertEquals(WorkoutSessionState(), transition.state)
+        assertTrue(transition.effects.isEmpty())
+    }
+
     private fun sampleWorkout(): Workout = Workout(
         id = "workout-session-1",
         schemaVersion = DefaultWorkoutSchemaVersion,

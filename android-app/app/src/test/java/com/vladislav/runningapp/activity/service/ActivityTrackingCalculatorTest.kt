@@ -60,6 +60,39 @@ class ActivityTrackingCalculatorTest {
     }
 
     @Test
+    fun pointFilterRejectsInvalidCoordinatesAndNonPositiveAccuracy() {
+        val invalidLatitude = point(
+            latitude = Double.NaN,
+            longitude = 37.618423,
+            recordedAtEpochMs = 1_000L,
+            accuracyMeters = 8f,
+        )
+        val invalidLongitude = point(
+            latitude = 55.751244,
+            longitude = 181.0,
+            recordedAtEpochMs = 1_000L,
+            accuracyMeters = 8f,
+        )
+        val zeroAccuracy = point(
+            latitude = 55.751244,
+            longitude = 37.618423,
+            recordedAtEpochMs = 1_000L,
+            accuracyMeters = 0f,
+        )
+        val negativeAccuracy = point(
+            latitude = 55.751244,
+            longitude = 37.618423,
+            recordedAtEpochMs = 1_000L,
+            accuracyMeters = -4f,
+        )
+
+        assertFalse(ActivityPointFilter.shouldAccept(previousAcceptedPoint = null, candidatePoint = invalidLatitude))
+        assertFalse(ActivityPointFilter.shouldAccept(previousAcceptedPoint = null, candidatePoint = invalidLongitude))
+        assertFalse(ActivityPointFilter.shouldAccept(previousAcceptedPoint = null, candidatePoint = zeroAccuracy))
+        assertFalse(ActivityPointFilter.shouldAccept(previousAcceptedPoint = null, candidatePoint = negativeAccuracy))
+    }
+
+    @Test
     fun distanceCalculatorReturnsStableApproximateMeters() {
         val start = point(
             latitude = 55.751244,

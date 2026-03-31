@@ -1,0 +1,166 @@
+package com.vladislav.runningapp.training.ui
+
+import com.vladislav.runningapp.activity.ActivitySessionType
+import com.vladislav.runningapp.activity.ActivityTracker
+import com.vladislav.runningapp.activity.ActivityTrackerState
+import com.vladislav.runningapp.core.startup.MainDispatcherRule
+import com.vladislav.runningapp.training.WorkoutRepository
+import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
+import com.vladislav.runningapp.training.domain.Workout
+import com.vladislav.runningapp.training.domain.WorkoutStep
+import com.vladislav.runningapp.training.domain.WorkoutStepType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+class TrainingViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun startSelectedWorkoutReturnsFalseWhenAnotherSessionIsActive() = runTest(mainDispatcherRule.dispatcher) {
+        val tracker = FakeActivityTracker(
+            initialState = ActivityTrackerState(
+                sessionId = "active-session",
+                type = ActivitySessionType.FreeRun,
+                startedAtEpochMs = 1L,
+                isTracking = true,
+            ),
+        )
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
+            activityTracker = tracker,
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.onStartSelectedWorkout())
+        assertTrue(tracker.startedWorkouts.isEmpty())
+        assertEquals(
+            "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun saveWorkoutRestoresEditorStateWhenRepositoryWriteFails() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(saveError = IllegalStateException("disk full")),
+            activityTracker = FakeActivityTracker(),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onCreateWorkout()
+        viewModel.onTitleChanged("Интервалы")
+        viewModel.onStepDurationChanged(index = 0, value = "180")
+        viewModel.onStepVoicePromptChanged(index = 0, value = "Разминка.")
+        viewModel.onSaveWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        val editorState = viewModel.uiState.value.editorState
+        assertNotNull(editorState)
+        assertFalse(requireNotNull(editorState).isSaving)
+        assertEquals(
+            "Не удалось сохранить тренировку локально. Повторите попытку.",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun saveCopySurfacesRepositoryFailure() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(
+                workouts = listOf(sampleWorkout()),
+                saveError = IllegalStateException("disk full"),
+            ),
+            activityTracker = FakeActivityTracker(),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onSaveCopyOfSelectedWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(
+            "Не удалось создать копию тренировки локально. Повторите попытку.",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    private class FakeWorkoutRepository(
+        workouts: List<Workout> = emptyList(),
+        private val saveError: Throwable? = null,
+    ) : WorkoutRepository {
+        private val state = MutableStateFlow(workouts)
+
+        override fun observeWorkouts(): Flow<List<Workout>> = state
+
+        override fun observeWorkout(workoutId: String): Flow<Workout?> = MutableStateFlow(
+            state.value.firstOrNull { workout -> workout.id == workoutId },
+        )
+
+        override suspend fun getWorkout(workoutId: String): Workout? =
+            state.value.firstOrNull { workout -> workout.id == workoutId }
+
+        override suspend fun saveWorkout(workout: Workout) {
+            saveError?.let { throw it }
+            state.value = state.value.filterNot { existing -> existing.id == workout.id } + workout
+        }
+
+        override suspend fun deleteWorkout(workoutId: String) {
+            state.value = state.value.filterNot { workout -> workout.id == workoutId }
+        }
+    }
+
+    private class FakeActivityTracker(
+        initialState: ActivityTrackerState = ActivityTrackerState(),
+    ) : ActivityTracker {
+        private val mutableState = MutableStateFlow(initialState)
+        val startedWorkouts = mutableListOf<Workout>()
+
+        override val trackerState: StateFlow<ActivityTrackerState> = mutableState
+
+        override fun startFreeRun() = Unit
+
+        override fun startPlannedWorkout(workout: Workout) {
+            startedWorkouts += workout
+            mutableState.value = ActivityTrackerState(
+                sessionId = "planned-session",
+                type = ActivitySessionType.PlannedWorkout,
+                startedAtEpochMs = 1L,
+                workoutId = workout.id,
+                workoutTitle = workout.title,
+                isTracking = true,
+            )
+        }
+
+        override fun stopActiveSession() {
+            mutableState.value = ActivityTrackerState()
+        }
+    }
+}
+
+private fun sampleWorkout(): Workout = Workout(
+    id = "workout-1",
+    schemaVersion = DefaultWorkoutSchemaVersion,
+    title = "Интервалы для старта",
+    summary = null,
+    goal = null,
+    disclaimer = null,
+    steps = listOf(
+        WorkoutStep(
+            type = WorkoutStepType.Warmup,
+            durationSec = 180,
+            voicePrompt = "Разминка.",
+        ),
+    ),
+)

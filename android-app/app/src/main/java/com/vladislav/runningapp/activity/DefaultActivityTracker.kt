@@ -1,5 +1,6 @@
 package com.vladislav.runningapp.activity
 
+import android.util.Log
 import com.vladislav.runningapp.activity.service.ActiveSessionServiceController
 import com.vladislav.runningapp.activity.service.ActivityDistanceCalculator
 import com.vladislav.runningapp.activity.service.ActivityPointFilter
@@ -24,6 +25,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+private const val ActivityTrackerLogTag = "DefaultActivityTracker"
 
 @Singleton
 class DefaultActivityTracker @Inject constructor(
@@ -154,21 +157,28 @@ class DefaultActivityTracker @Inject constructor(
             activeSessionServiceController.stop()
         }
 
+        var sessionPersisted = snapshot.isPersisted
         if (!snapshot.isPersisted) {
-            activityRepository.saveCompletedSession(
-                CompletedActivitySession(
-                    id = requireNotNull(snapshot.sessionId),
-                    type = requireNotNull(snapshot.type),
-                    workoutId = snapshot.workoutId,
-                    workoutTitle = snapshot.workoutTitle,
-                    startedAtEpochMs = requireNotNull(snapshot.startedAtEpochMs),
-                    completedAtEpochMs = System.currentTimeMillis(),
-                    durationSec = snapshot.durationSec,
-                    distanceMeters = snapshot.distanceMeters,
-                    averagePaceSecPerKm = snapshot.averagePaceSecPerKm,
-                    routePoints = snapshot.routePoints,
-                ),
-            )
+            sessionPersisted = runCatching {
+                activityRepository.saveCompletedSession(
+                    CompletedActivitySession(
+                        id = requireNotNull(snapshot.sessionId),
+                        type = requireNotNull(snapshot.type),
+                        workoutId = snapshot.workoutId,
+                        workoutTitle = snapshot.workoutTitle,
+                        startedAtEpochMs = requireNotNull(snapshot.startedAtEpochMs),
+                        completedAtEpochMs = System.currentTimeMillis(),
+                        durationSec = snapshot.durationSec,
+                        distanceMeters = snapshot.distanceMeters,
+                        averagePaceSecPerKm = snapshot.averagePaceSecPerKm,
+                        routePoints = snapshot.routePoints,
+                    ),
+                )
+                true
+            }.getOrElse { error ->
+                Log.e(ActivityTrackerLogTag, "Failed to persist completed activity session.", error)
+                false
+            }
         }
 
         if (stopWorkoutController) {
@@ -176,11 +186,11 @@ class DefaultActivityTracker @Inject constructor(
         }
 
         mutationMutex.withLock {
-            mutableTrackerState.value = if (retainCompletedState && snapshot.isPlannedWorkout) {
+            mutableTrackerState.value = if (retainCompletedState && snapshot.isPlannedWorkout && sessionPersisted) {
                 snapshot.copy(
                     isTracking = false,
                     isCompleted = true,
-                    isPersisted = true,
+                    isPersisted = sessionPersisted,
                 )
             } else {
                 ActivityTrackerState()

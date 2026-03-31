@@ -8,15 +8,12 @@ import org.junit.Test
 class PermissionRequirementsReducerTest {
     @Test
     fun marksNotificationsAsNotRequiredBelowAndroid13() {
-        val state = PermissionRequirementsReducer.reduce(
-            currentState = PermissionRequirementsState(),
-            action = PermissionRequirementsAction.SyncFromSystem(
-                snapshot = PermissionSnapshot(
-                    sdkInt = 32,
-                    locationGranted = true,
-                    notificationsGranted = false,
-                    foregroundTrackingConfigured = true,
-                ),
+        val state = permissionRequirementsFor(
+            PermissionSnapshot(
+                sdkInt = 32,
+                locationGranted = true,
+                notificationsGranted = false,
+                foregroundTrackingConfigured = true,
             ),
         )
 
@@ -28,15 +25,12 @@ class PermissionRequirementsReducerTest {
 
     @Test
     fun requiresNotificationsOnAndroid13AndAbove() {
-        val state = PermissionRequirementsReducer.reduce(
-            currentState = PermissionRequirementsState(),
-            action = PermissionRequirementsAction.SyncFromSystem(
-                snapshot = PermissionSnapshot(
-                    sdkInt = 33,
-                    locationGranted = true,
-                    notificationsGranted = false,
-                    foregroundTrackingConfigured = true,
-                ),
+        val state = permissionRequirementsFor(
+            PermissionSnapshot(
+                sdkInt = 33,
+                locationGranted = true,
+                notificationsGranted = false,
+                foregroundTrackingConfigured = true,
             ),
         )
 
@@ -46,15 +40,12 @@ class PermissionRequirementsReducerTest {
 
     @Test
     fun requiresForegroundTrackingConfigurationForTrackedSessions() {
-        val state = PermissionRequirementsReducer.reduce(
-            currentState = PermissionRequirementsState(),
-            action = PermissionRequirementsAction.SyncFromSystem(
-                snapshot = PermissionSnapshot(
-                    sdkInt = 36,
-                    locationGranted = true,
-                    notificationsGranted = true,
-                    foregroundTrackingConfigured = false,
-                ),
+        val state = permissionRequirementsFor(
+            PermissionSnapshot(
+                sdkInt = 36,
+                locationGranted = true,
+                notificationsGranted = true,
+                foregroundTrackingConfigured = false,
             ),
         )
 

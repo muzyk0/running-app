@@ -75,7 +75,7 @@ private fun FreeRunScreen(
         }
 
         when {
-            state.isPlannedWorkout -> PlannedWorkoutRedirectCard(
+            state.isTracking && state.isPlannedWorkout -> PlannedWorkoutRedirectCard(
                 workoutTitle = state.workoutTitle,
                 onOpenActiveSession = onOpenActiveSession,
             )

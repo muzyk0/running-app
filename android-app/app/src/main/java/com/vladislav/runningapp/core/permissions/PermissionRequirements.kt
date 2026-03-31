@@ -25,26 +25,15 @@ data class PermissionSnapshot(
     val foregroundTrackingConfigured: Boolean,
 )
 
-sealed interface PermissionRequirementsAction {
-    data class SyncFromSystem(val snapshot: PermissionSnapshot) : PermissionRequirementsAction
-}
-
-object PermissionRequirementsReducer {
-    fun reduce(
-        currentState: PermissionRequirementsState,
-        action: PermissionRequirementsAction,
-    ): PermissionRequirementsState = when (action) {
-        is PermissionRequirementsAction.SyncFromSystem -> currentState.copy(
-            location = action.snapshot.locationGranted.toRequirementState(),
-            notifications = if (action.snapshot.sdkInt >= 33) {
-                action.snapshot.notificationsGranted.toRequirementState()
-            } else {
-                RequirementState.NotRequired
-            },
-            foregroundTracking = action.snapshot.foregroundTrackingConfigured.toRequirementState(),
-        )
-    }
-}
+fun permissionRequirementsFor(snapshot: PermissionSnapshot): PermissionRequirementsState = PermissionRequirementsState(
+    location = snapshot.locationGranted.toRequirementState(),
+    notifications = if (snapshot.sdkInt >= 33) {
+        snapshot.notificationsGranted.toRequirementState()
+    } else {
+        RequirementState.NotRequired
+    },
+    foregroundTracking = snapshot.foregroundTrackingConfigured.toRequirementState(),
+)
 
 private fun Boolean.toRequirementState(): RequirementState = if (this) {
     RequirementState.Available

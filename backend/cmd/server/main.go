@@ -12,10 +12,8 @@ import (
 
 	"github.com/muzyk0/running-app/backend/internal/api"
 	"github.com/muzyk0/running-app/backend/internal/config"
-	"github.com/muzyk0/running-app/backend/internal/prompt"
 	"github.com/muzyk0/running-app/backend/internal/provider"
 	"github.com/muzyk0/running-app/backend/internal/provider/codexcli"
-	"github.com/muzyk0/running-app/backend/internal/schema"
 	"github.com/muzyk0/running-app/backend/internal/service"
 )
 
@@ -43,8 +41,6 @@ func run() error {
 
 	trainingService := service.NewTrainingService(
 		generator,
-		prompt.NewBuilder(),
-		schema.NewNormalizer(),
 		logger.With("component", "service"),
 	)
 	router := api.NewRouter(logger.With("component", "http"), trainingService, cfg.RequestTimeout)

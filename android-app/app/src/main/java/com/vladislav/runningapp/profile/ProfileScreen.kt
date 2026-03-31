@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -104,6 +105,9 @@ private fun ProfileScreen(
             isOnboarding = state.isOnboarding,
             isEditing = state.isEditing,
         )
+        state.errorMessage?.let { message ->
+            InlineErrorCard(message = message)
+        }
         DisclaimerStatusCard(
             isAccepted = state.isDisclaimerAccepted,
             onReviewDisclaimer = onShowDisclaimer,
@@ -121,6 +125,7 @@ private fun ProfileScreen(
                 onPromptFieldValueChanged = onPromptFieldValueChanged,
                 onAddPromptField = onAddPromptField,
                 onRemovePromptField = onRemovePromptField,
+                isSaving = state.isSaving,
                 onSaveProfile = onSaveProfile,
                 onCancelEditing = onCancelEditing,
             )
@@ -219,6 +224,7 @@ private fun ProfileEditorCard(
     onPromptFieldValueChanged: (Int, String) -> Unit,
     onAddPromptField: () -> Unit,
     onRemovePromptField: (Int) -> Unit,
+    isSaving: Boolean,
     onSaveProfile: () -> Unit,
     onCancelEditing: () -> Unit,
 ) {
@@ -303,18 +309,36 @@ private fun ProfileEditorCard(
             ) {
                 Button(
                     onClick = onSaveProfile,
+                    enabled = !isSaving,
                 ) {
                     Text(text = stringResource(R.string.profile_save))
                 }
                 if (savedProfile != null) {
                     OutlinedButton(
                         onClick = onCancelEditing,
+                        enabled = !isSaving,
                     ) {
                         Text(text = stringResource(R.string.profile_cancel))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InlineErrorCard(message: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(20.dp),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

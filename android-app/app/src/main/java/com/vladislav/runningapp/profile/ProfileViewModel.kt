@@ -6,6 +6,7 @@ import com.vladislav.runningapp.core.datastore.DisclaimerPreferenceStore
 import com.vladislav.runningapp.core.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,8 @@ data class ProfileUiState(
     val isEditing: Boolean = false,
     val isDisclaimerAccepted: Boolean = false,
     val shouldShowDisclaimerDialog: Boolean = false,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null,
 ) {
     val isOnboarding: Boolean
         get() = savedProfile == null
@@ -135,6 +138,7 @@ class ProfileViewModel @Inject constructor(
                 isEditing = true,
                 draft = state.savedProfile?.toDraft() ?: state.draft,
                 validationErrors = ProfileValidationErrors(),
+                errorMessage = null,
             )
         }
     }
@@ -146,6 +150,7 @@ class ProfileViewModel @Inject constructor(
                 isEditing = false,
                 draft = savedProfile.toDraft(),
                 validationErrors = ProfileValidationErrors(),
+                errorMessage = null,
             )
         }
     }
@@ -175,25 +180,52 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun onSaveProfile() {
+        if (_uiState.value.isSaving) {
+            return
+        }
         val currentDraft = _uiState.value.draft
         val validationResult = ProfileFormValidator.validate(currentDraft)
         if (validationResult.errors.hasErrors) {
             _uiState.update { state ->
-                state.copy(validationErrors = validationResult.errors)
+                state.copy(
+                    validationErrors = validationResult.errors,
+                    errorMessage = null,
+                )
             }
             return
         }
 
         val profile = requireNotNull(validationResult.profile)
+        _uiState.update { state ->
+            state.copy(
+                isSaving = true,
+                errorMessage = null,
+            )
+        }
         viewModelScope.launch(defaultDispatcher) {
-            profileRepository.saveProfile(profile)
-            _uiState.update { state ->
-                state.copy(
-                    savedProfile = profile,
-                    draft = profile.toDraft(),
-                    validationErrors = ProfileValidationErrors(),
-                    isEditing = false,
-                )
+            runCatching {
+                profileRepository.saveProfile(profile)
+            }.onSuccess {
+                _uiState.update { state ->
+                    state.copy(
+                        savedProfile = profile,
+                        draft = profile.toDraft(),
+                        validationErrors = ProfileValidationErrors(),
+                        isEditing = false,
+                        isSaving = false,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        errorMessage = "Не удалось сохранить профиль локально. Повторите попытку.",
+                    )
+                }
             }
         }
     }
@@ -203,6 +235,7 @@ class ProfileViewModel @Inject constructor(
             state.copy(
                 draft = transform(state.draft),
                 validationErrors = ProfileValidationErrors(),
+                errorMessage = null,
             )
         }
     }

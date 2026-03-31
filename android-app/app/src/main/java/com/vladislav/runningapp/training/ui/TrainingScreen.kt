@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -61,8 +62,9 @@ fun TrainingScreen(
         onConfirmDeleteWorkout = viewModel::onConfirmDeleteWorkout,
         onSaveCopy = viewModel::onSaveCopyOfSelectedWorkout,
         onStartWorkout = {
-            viewModel.onStartSelectedWorkout()
-            onOpenActiveSession()
+            if (viewModel.onStartSelectedWorkout()) {
+                onOpenActiveSession()
+            }
         },
         onTitleChanged = viewModel::onTitleChanged,
         onSummaryChanged = viewModel::onSummaryChanged,
@@ -134,6 +136,9 @@ private fun TrainingScreen(
             isEditing = state.editorState != null,
             onCreateWorkout = onCreateWorkout,
         )
+        state.errorMessage?.let { message ->
+            InlineErrorCard(message = message)
+        }
 
         if (state.workouts.isNotEmpty()) {
             WorkoutListCard(
@@ -177,6 +182,22 @@ private fun TrainingScreen(
                 EmptyWorkoutsCard(onCreateWorkout = onCreateWorkout)
             }
         }
+    }
+}
+
+@Composable
+private fun InlineErrorCard(message: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(20.dp),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

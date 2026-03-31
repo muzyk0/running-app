@@ -60,6 +60,14 @@ class DefaultTrainingGenerationRepository @Inject constructor(
             )
         } catch (error: CancellationException) {
             throw error
+        } catch (error: IllegalArgumentException) {
+            TrainingGenerationResult.Failure(
+                TrainingGenerationError(
+                    code = TrainingGenerationErrorCode.InvalidResponse,
+                    message = error.message?.trim().takeUnless { it.isNullOrEmpty() }
+                        ?: "Backend вернул ответ в неподдерживаемом формате.",
+                ),
+            )
         } catch (error: Exception) {
             TrainingGenerationResult.Failure(
                 TrainingGenerationError(

@@ -37,8 +37,13 @@ export JAVA_HOME="$(
 - `make test`: smoke-check the repo wiring, coverage tasks, and CI workflow presence
 - `make coverage`: run Android non-UI coverage verification and backend package coverage gates
 - `make ci`: run the same Android and backend checks used by GitHub Actions
+- `make android-smoke`: verify the Android Gradle wrapper and module wiring with `./gradlew help`
+- `make backend-smoke`: verify Go module resolution and run the backend test suite
+- `make docker-smoke`: verify the backend Docker build context and daemon availability
 - `make android-ci`: run `assembleDebug`, `testDebugUnitTest`, `lintDebug`, and Android JaCoCo verification
 - `make backend-ci`: run backend coverage, `go vet`, and `docker build -t running-app-backend .`
+- `make android-coverage`: run only the Android JVM coverage report and threshold gate
+- `make backend-coverage`: run backend tests plus the per-package coverage threshold gate
 
 ## Backend: Local Run
 
@@ -71,6 +76,8 @@ Required and optional backend environment variables:
 
 The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine.
 
+Foreground session tracking features also require granting runtime location permission and, on Android 13+, notification permission.
+
 Typical local flow:
 
 ```bash
@@ -100,6 +107,8 @@ Backend coverage checks the critical packages at an 80% minimum and also writes 
 ```bash
 ./scripts/backend-coverage.sh
 ```
+
+Set `BACKEND_COVERAGE_THRESHOLD=<percent>` to override the default 80% minimum during local validation.
 
 The GitHub Actions workflow runs the same repo-owned entrypoints:
 

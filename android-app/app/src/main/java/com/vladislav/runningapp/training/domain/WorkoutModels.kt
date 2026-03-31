@@ -24,7 +24,7 @@ enum class WorkoutStepType(
             "cooldown_walk" -> Cooldown
 
             Rest.canonicalValue -> Rest
-            else -> Walk
+            else -> throw IllegalArgumentException("Unsupported workout step type: ${value.trim()}")
         }
     }
 }

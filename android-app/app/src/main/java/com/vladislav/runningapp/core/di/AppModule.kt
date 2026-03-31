@@ -8,12 +8,9 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.vladislav.runningapp.activity.data.local.ActivityDao
 import com.vladislav.runningapp.core.navigation.TopLevelDestination
-import com.vladislav.runningapp.core.startup.DefaultStartupDestinationResolver
-import com.vladislav.runningapp.core.startup.StartupDestinationResolver
 import com.vladislav.runningapp.core.storage.AppDatabase
 import com.vladislav.runningapp.core.storage.ProfileDao
 import com.vladislav.runningapp.training.data.local.WorkoutDao
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,16 +24,6 @@ import kotlinx.coroutines.Dispatchers
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class DefaultDispatcher
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class StartupModule {
-    @Binds
-    @Singleton
-    abstract fun bindStartupDestinationResolver(
-        defaultStartupDestinationResolver: DefaultStartupDestinationResolver,
-    ): StartupDestinationResolver
-}
 
 @Module
 @InstallIn(SingletonComponent::class)

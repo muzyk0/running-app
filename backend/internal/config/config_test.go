@@ -77,6 +77,18 @@ func TestLoadOverrides(t *testing.T) {
 	if cfg.ShutdownTimeout != 11*time.Second {
 		t.Fatalf("ShutdownTimeout = %s, want %s", cfg.ShutdownTimeout, 11*time.Second)
 	}
+	if cfg.ReadHeaderTimeout != 2*time.Second {
+		t.Fatalf("ReadHeaderTimeout = %s, want %s", cfg.ReadHeaderTimeout, 2*time.Second)
+	}
+	if cfg.ReadTimeout != 4*time.Second {
+		t.Fatalf("ReadTimeout = %s, want %s", cfg.ReadTimeout, 4*time.Second)
+	}
+	if cfg.WriteTimeout != 5*time.Second {
+		t.Fatalf("WriteTimeout = %s, want %s", cfg.WriteTimeout, 5*time.Second)
+	}
+	if cfg.IdleTimeout != 6*time.Second {
+		t.Fatalf("IdleTimeout = %s, want %s", cfg.IdleTimeout, 6*time.Second)
+	}
 	if cfg.LogLevel != slog.LevelDebug {
 		t.Fatalf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelDebug)
 	}

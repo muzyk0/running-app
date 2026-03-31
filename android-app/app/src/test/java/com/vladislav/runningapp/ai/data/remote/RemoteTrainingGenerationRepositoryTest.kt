@@ -87,6 +87,38 @@ class RemoteTrainingGenerationRepositoryTest {
     }
 
     @Test
+    fun returnsInvalidResponseWhenBackendUsesUnsupportedStepType() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<GenerateTrainingResponseDto> = Response.success(
+                    sampleResponse().copy(
+                        training = sampleResponse().training.copy(
+                            steps = listOf(
+                                RemoteWorkoutStepDto(
+                                    id = "step-1",
+                                    type = "sprint",
+                                    durationSec = 180,
+                                    voicePrompt = "Ускорение.",
+                                ),
+                            ),
+                        ),
+                    ),
+                )
+            },
+            gson = Gson(),
+        )
+
+        val result = repository.generateWorkout(profile = sampleUserProfile(), userNote = null)
+
+        assertTrue(result is TrainingGenerationResult.Failure)
+        val failure = result as TrainingGenerationResult.Failure
+        assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
+        assertTrue(failure.error.message.contains("Unsupported workout step type"))
+    }
+
+    @Test
     fun mapsNetworkIoExceptionsIntoNetworkFailures() = runTest {
         val repository = DefaultTrainingGenerationRepository(
             apiService = object : TrainingGenerationApiService {

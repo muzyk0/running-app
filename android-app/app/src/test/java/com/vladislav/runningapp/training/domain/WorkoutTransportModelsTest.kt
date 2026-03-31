@@ -76,4 +76,22 @@ class WorkoutTransportModelsTest {
         assertEquals("step-2", dto.training.steps[1].id)
         assertEquals("walk", dto.training.steps[1].type)
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun toDomainWorkoutRejectsUnsupportedStepTypes() {
+        WorkoutEnvelopeDto(
+            schemaVersion = DefaultWorkoutSchemaVersion,
+            training = WorkoutDto(
+                title = "Интервалы",
+                steps = listOf(
+                    WorkoutStepDto(
+                        id = "step-1",
+                        type = "sprint",
+                        durationSec = 120,
+                        voicePrompt = "Ускорение.",
+                    ),
+                ),
+            ),
+        ).toDomainWorkout(workoutId = "local-unsupported")
+    }
 }

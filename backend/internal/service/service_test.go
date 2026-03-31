@@ -10,9 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/muzyk0/running-app/backend/internal/prompt"
 	"github.com/muzyk0/running-app/backend/internal/provider"
-	"github.com/muzyk0/running-app/backend/internal/schema"
 )
 
 func TestGenerateTrainingBuildsPromptAndNormalizesResponse(t *testing.T) {
@@ -23,7 +21,7 @@ func TestGenerateTrainingBuildsPromptAndNormalizesResponse(t *testing.T) {
 		},
 	}
 
-	service := NewTrainingService(stub, prompt.NewBuilder(), schema.NewNormalizer(), testLogger())
+	service := NewTrainingService(stub, testLogger())
 
 	result, err := service.GenerateTraining(context.Background(), validRequest())
 	if err != nil {
@@ -66,8 +64,6 @@ func TestGenerateTrainingBuildsPromptAndNormalizesResponse(t *testing.T) {
 func TestGenerateTrainingRejectsMalformedJSON(t *testing.T) {
 	service := NewTrainingService(
 		&stubGenerator{response: provider.CompletionResponse{RawOutput: readFixture(t, "malformed-json.txt")}},
-		prompt.NewBuilder(),
-		schema.NewNormalizer(),
 		testLogger(),
 	)
 
@@ -83,8 +79,6 @@ func TestGenerateTrainingRejectsMalformedJSON(t *testing.T) {
 func TestGenerateTrainingRejectsMissingRequiredFields(t *testing.T) {
 	service := NewTrainingService(
 		&stubGenerator{response: provider.CompletionResponse{RawOutput: readFixture(t, "missing-fields.json")}},
-		prompt.NewBuilder(),
-		schema.NewNormalizer(),
 		testLogger(),
 	)
 
@@ -100,8 +94,6 @@ func TestGenerateTrainingRejectsMissingRequiredFields(t *testing.T) {
 func TestGenerateTrainingRepairsDuplicateStepIDs(t *testing.T) {
 	service := NewTrainingService(
 		&stubGenerator{response: provider.CompletionResponse{RawOutput: readFixture(t, "duplicate-step-ids.json")}},
-		prompt.NewBuilder(),
-		schema.NewNormalizer(),
 		testLogger(),
 	)
 
@@ -131,8 +123,6 @@ func TestGenerateTrainingPropagatesProviderFailure(t *testing.T) {
 	expectedErr := errors.New("provider unavailable")
 	service := NewTrainingService(
 		&stubGenerator{err: expectedErr},
-		prompt.NewBuilder(),
-		schema.NewNormalizer(),
 		testLogger(),
 	)
 
@@ -143,7 +133,7 @@ func TestGenerateTrainingPropagatesProviderFailure(t *testing.T) {
 }
 
 func TestGenerateTrainingRejectsMissingProvider(t *testing.T) {
-	service := NewTrainingService(nil, prompt.NewBuilder(), schema.NewNormalizer(), testLogger())
+	service := NewTrainingService(nil, testLogger())
 
 	_, err := service.GenerateTraining(context.Background(), validRequest())
 	if !errors.Is(err, ErrProviderNotConfigured) {
@@ -152,7 +142,7 @@ func TestGenerateTrainingRejectsMissingProvider(t *testing.T) {
 }
 
 func TestNewTrainingServiceUsesDefaultBuilderAndNormalizer(t *testing.T) {
-	service := NewTrainingService(provider.NewStaticGenerator(), nil, nil, nil)
+	service := NewTrainingService(provider.NewStaticGenerator(), nil)
 
 	result, err := service.GenerateTraining(context.Background(), validRequest())
 	if err != nil {

@@ -3,9 +3,7 @@ package com.vladislav.runningapp.core.ui
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +18,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,7 +39,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,70 +46,26 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.navigation.RunningAppNavHost
 import com.vladislav.runningapp.core.navigation.RunningAppNavigationState
 import com.vladislav.runningapp.core.navigation.TopLevelDestination
-import com.vladislav.runningapp.core.permissions.PermissionRequirementsAction
-import com.vladislav.runningapp.core.permissions.PermissionRequirementsReducer
 import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
 import com.vladislav.runningapp.core.permissions.PermissionSnapshotFactory
 import com.vladislav.runningapp.core.permissions.RequirementState
-import com.vladislav.runningapp.core.startup.AppStartupUiState
-import com.vladislav.runningapp.core.startup.AppStartupViewModel
+import com.vladislav.runningapp.core.permissions.permissionRequirementsFor
 import kotlinx.coroutines.launch
 
 @Composable
 fun RunningAppApp(
     modifier: Modifier = Modifier,
-    startupViewModel: AppStartupViewModel = hiltViewModel(),
 ) {
-    val uiState by startupViewModel.uiState.collectAsStateWithLifecycle()
-
-    when (val state = uiState) {
-        AppStartupUiState.Loading -> LoadingScreen(modifier = modifier)
-        is AppStartupUiState.Ready -> ReadyAppShell(
-            startDestination = state.bootstrap.startDestination,
-            modifier = modifier,
-        )
-    }
-}
-
-@Composable
-private fun LoadingScreen(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surface,
-                    ),
-                ),
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = stringResource(R.string.startup_loading),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.startup_caption),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    ReadyAppShell(
+        startDestination = TopLevelDestination.Profile,
+        modifier = modifier,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,11 +86,8 @@ private fun ReadyAppShell(
     var permissionsState by remember { mutableStateOf(PermissionRequirementsState()) }
 
     fun refreshPermissions() {
-        permissionsState = PermissionRequirementsReducer.reduce(
-            currentState = permissionsState,
-            action = PermissionRequirementsAction.SyncFromSystem(
-                PermissionSnapshotFactory.fromContext(context),
-            ),
+        permissionsState = permissionRequirementsFor(
+            PermissionSnapshotFactory.fromContext(context),
         )
     }
 

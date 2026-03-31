@@ -9,6 +9,7 @@ import com.vladislav.runningapp.training.domain.Workout
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ data class TrainingUiState(
     val selectedWorkoutId: String? = null,
     val editorState: WorkoutEditorState? = null,
     val pendingDeleteWorkoutId: String? = null,
+    val errorMessage: String? = null,
 ) {
     val selectedWorkout: Workout?
         get() = workouts.firstOrNull { workout -> workout.id == selectedWorkoutId }
@@ -61,7 +63,10 @@ class TrainingViewModel @Inject constructor(
             if (state.editorState != null) {
                 state
             } else {
-                state.copy(selectedWorkoutId = workoutId)
+                state.copy(
+                    selectedWorkoutId = workoutId,
+                    errorMessage = null,
+                )
             }
         }
     }
@@ -78,6 +83,7 @@ class TrainingViewModel @Inject constructor(
                     action = WorkoutEditorAction.LoadWorkout(workout = null),
                 ),
                 pendingDeleteWorkoutId = null,
+                errorMessage = null,
             )
         }
     }
@@ -91,13 +97,17 @@ class TrainingViewModel @Inject constructor(
                     action = WorkoutEditorAction.LoadWorkout(selectedWorkout),
                 ),
                 pendingDeleteWorkoutId = null,
+                errorMessage = null,
             )
         }
     }
 
     fun onDismissEditor() {
         _uiState.update { state ->
-            state.copy(editorState = null)
+            state.copy(
+                editorState = null,
+                errorMessage = null,
+            )
         }
     }
 
@@ -110,16 +120,35 @@ class TrainingViewModel @Inject constructor(
 
     fun onDismissDeleteWorkout() {
         _uiState.update { state ->
-            state.copy(pendingDeleteWorkoutId = null)
+            state.copy(
+                pendingDeleteWorkoutId = null,
+                errorMessage = null,
+            )
         }
     }
 
     fun onConfirmDeleteWorkout() {
         val workoutId = _uiState.value.pendingDeleteWorkoutId ?: return
         viewModelScope.launch(defaultDispatcher) {
-            workoutRepository.deleteWorkout(workoutId)
-            _uiState.update { state ->
-                state.copy(pendingDeleteWorkoutId = null)
+            runCatching {
+                workoutRepository.deleteWorkout(workoutId)
+            }.onSuccess {
+                _uiState.update { state ->
+                    state.copy(
+                        pendingDeleteWorkoutId = null,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        pendingDeleteWorkoutId = null,
+                        errorMessage = "Не удалось удалить тренировку локально. Повторите попытку.",
+                    )
+                }
             }
         }
     }
@@ -134,16 +163,41 @@ class TrainingViewModel @Inject constructor(
             ),
         )
         viewModelScope.launch(defaultDispatcher) {
-            workoutRepository.saveWorkout(duplicatedWorkout)
-            _uiState.update { state ->
-                state.copy(selectedWorkoutId = duplicatedWorkout.id)
+            runCatching {
+                workoutRepository.saveWorkout(duplicatedWorkout)
+            }.onSuccess {
+                _uiState.update { state ->
+                    state.copy(
+                        selectedWorkoutId = duplicatedWorkout.id,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                _uiState.update { state ->
+                    state.copy(errorMessage = "Не удалось создать копию тренировки локально. Повторите попытку.")
+                }
             }
         }
     }
 
-    fun onStartSelectedWorkout() {
-        val selectedWorkout = _uiState.value.selectedWorkout ?: return
+    fun onStartSelectedWorkout(): Boolean {
+        val selectedWorkout = _uiState.value.selectedWorkout ?: return false
+        if (activityTracker.trackerState.value.isTracking) {
+            _uiState.update { state ->
+                state.copy(
+                    errorMessage = "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
+                )
+            }
+            return false
+        }
+        _uiState.update { state ->
+            state.copy(errorMessage = null)
+        }
         activityTracker.startPlannedWorkout(selectedWorkout)
+        return true
     }
 
     fun onSaveWorkout() {
@@ -162,6 +216,7 @@ class TrainingViewModel @Inject constructor(
                             action = WorkoutEditorAction.SetValidationErrors(validationErrors),
                         )
                     },
+                    errorMessage = null,
                 )
             }
             return
@@ -173,12 +228,31 @@ class TrainingViewModel @Inject constructor(
         }
 
         viewModelScope.launch(defaultDispatcher) {
-            workoutRepository.saveWorkout(preparedEditorState.toDomainWorkout())
-            _uiState.update { state ->
-                state.copy(
-                    selectedWorkoutId = preparedEditorState.workoutId,
-                    editorState = null,
-                )
+            runCatching {
+                workoutRepository.saveWorkout(preparedEditorState.toDomainWorkout())
+            }.onSuccess {
+                _uiState.update { state ->
+                    state.copy(
+                        selectedWorkoutId = preparedEditorState.workoutId,
+                        editorState = null,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        editorState = state.editorState?.let { editorState ->
+                            WorkoutEditorReducer.reduce(
+                                state = editorState,
+                                action = WorkoutEditorAction.SetSaving(false),
+                            )
+                        },
+                        errorMessage = "Не удалось сохранить тренировку локально. Повторите попытку.",
+                    )
+                }
             }
         }
     }
@@ -218,6 +292,7 @@ class TrainingViewModel @Inject constructor(
                     state = editorState,
                     action = action,
                 ),
+                errorMessage = null,
             )
         }
     }

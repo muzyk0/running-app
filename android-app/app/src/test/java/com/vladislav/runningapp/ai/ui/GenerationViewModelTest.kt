@@ -67,6 +67,91 @@ class GenerationViewModelTest {
         assertTrue(viewModel.uiState.value.generatedWorkout != null)
     }
 
+    @Test
+    fun surfacesErrorWhenProfileIsMissing() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = GenerationViewModel(
+            profileRepository = FakeProfileRepository(profile = null),
+            workoutRepository = FakeWorkoutRepository(),
+            generateWorkoutUseCase = GenerateWorkoutUseCase(
+                repository = object : TrainingGenerationRepository {
+                    override suspend fun generateWorkout(
+                        profile: UserProfile,
+                        userNote: String?,
+                    ): TrainingGenerationResult = error("generateWorkout should not be called without a profile")
+                },
+            ),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onGenerateWorkout()
+
+        assertEquals(
+            "Сначала заполните профиль, иначе backend не сможет собрать тренировку.",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun surfacesGenerationFailureFromRepository() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = GenerationViewModel(
+            profileRepository = FakeProfileRepository(profile = sampleUserProfile()),
+            workoutRepository = FakeWorkoutRepository(),
+            generateWorkoutUseCase = GenerateWorkoutUseCase(
+                repository = object : TrainingGenerationRepository {
+                    override suspend fun generateWorkout(
+                        profile: UserProfile,
+                        userNote: String?,
+                    ): TrainingGenerationResult = TrainingGenerationResult.Failure(
+                        error = com.vladislav.runningapp.ai.domain.TrainingGenerationError(
+                            code = com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode.ProviderError,
+                            message = "provider failed",
+                        ),
+                    )
+                },
+            ),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onGenerateWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("provider failed", viewModel.uiState.value.errorMessage)
+        assertEquals(false, viewModel.uiState.value.isGenerating)
+    }
+
+    @Test
+    fun surfacesSaveFailureWhenAcceptingGeneratedWorkout() = runTest(mainDispatcherRule.dispatcher) {
+        val workoutRepository = FakeWorkoutRepository(saveError = IllegalStateException("disk full"))
+        val viewModel = GenerationViewModel(
+            profileRepository = FakeProfileRepository(profile = sampleUserProfile()),
+            workoutRepository = workoutRepository,
+            generateWorkoutUseCase = GenerateWorkoutUseCase(
+                repository = object : TrainingGenerationRepository {
+                    override suspend fun generateWorkout(
+                        profile: UserProfile,
+                        userNote: String?,
+                    ): TrainingGenerationResult = TrainingGenerationResult.Success(sampleGeneratedWorkout())
+                },
+            ),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onGenerateWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onAcceptGeneratedWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(workoutRepository.savedWorkouts.isEmpty())
+        assertEquals(
+            "Не удалось сохранить тренировку локально. Повторите попытку.",
+            viewModel.uiState.value.errorMessage,
+        )
+        assertEquals(false, viewModel.uiState.value.isSaving)
+    }
+
     private class FakeProfileRepository(
         profile: UserProfile?,
     ) : ProfileRepository {
@@ -83,6 +168,11 @@ class GenerationViewModelTest {
 
     private class FakeWorkoutRepository : WorkoutRepository {
         val savedWorkouts = mutableListOf<Workout>()
+        var saveError: Throwable? = null
+
+        constructor(saveError: Throwable? = null) {
+            this.saveError = saveError
+        }
 
         override fun observeWorkouts(): Flow<List<Workout>> = flowOf(savedWorkouts.toList())
 
@@ -93,6 +183,7 @@ class GenerationViewModelTest {
             savedWorkouts.firstOrNull { workout -> workout.id == workoutId }
 
         override suspend fun saveWorkout(workout: Workout) {
+            saveError?.let { throw it }
             savedWorkouts += workout
         }
 

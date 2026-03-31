@@ -12,6 +12,7 @@ import com.vladislav.runningapp.training.domain.Workout
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -154,7 +155,10 @@ class GenerationViewModel @Inject constructor(
                     )
                 }
                 _navigationEvents.emit(GenerationNavigationEvent.OpenSavedWorkout(savedWorkout.id))
-            }.onFailure {
+            }.onFailure { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
                 _uiState.update { state ->
                     state.copy(
                         isSaving = false,

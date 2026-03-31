@@ -154,6 +154,17 @@ func TestGenerateTrainingReturnsProviderNotConfiguredError(t *testing.T) {
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)
 	}
+
+	var payload errorEnvelope
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Error.Code != "service_unavailable" {
+		t.Fatalf("error.code = %q, want %q", payload.Error.Code, "service_unavailable")
+	}
+	if payload.Error.Message != "training provider is not configured" {
+		t.Fatalf("error.message = %q, want %q", payload.Error.Message, "training provider is not configured")
+	}
 }
 
 func TestGenerateTrainingRejectsBlankAdditionalPromptFieldValue(t *testing.T) {
