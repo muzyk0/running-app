@@ -7,6 +7,8 @@ import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.profile.UserSex
+import java.io.IOException
+import java.util.concurrent.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -16,6 +18,27 @@ import org.junit.Test
 import retrofit2.Response
 
 class RemoteTrainingGenerationRepositoryTest {
+    @Test
+    fun returnsGeneratedWorkoutPreviewOnSuccessfulResponse() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<GenerateTrainingResponseDto> = Response.success(sampleResponse())
+            },
+            gson = Gson(),
+        )
+
+        val result = repository.generateWorkout(profile = sampleUserProfile(), userNote = "  без спринтов  ")
+
+        assertTrue(result is TrainingGenerationResult.Success)
+        val success = result as TrainingGenerationResult.Success
+        assertEquals(GeneratedWorkoutPreviewId, success.workout.id)
+        assertEquals("Интервалы", success.workout.title)
+        assertEquals(2, success.workout.steps.size)
+        assertEquals(420, success.workout.estimatedDurationSec)
+    }
+
     @Test
     fun mapsBackendValidationErrorsIntoDomainFailures() = runTest {
         val repository = DefaultTrainingGenerationRepository(
@@ -44,6 +67,56 @@ class RemoteTrainingGenerationRepositoryTest {
         assertEquals(TrainingGenerationErrorCode.InvalidRequest, failure.error.code)
         assertEquals("profile.training_goal is required", failure.error.message)
     }
+
+    @Test
+    fun returnsInvalidResponseWhenBackendBodyIsMissing() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<GenerateTrainingResponseDto> = Response.success(null)
+            },
+            gson = Gson(),
+        )
+
+        val result = repository.generateWorkout(profile = sampleUserProfile(), userNote = null)
+
+        assertTrue(result is TrainingGenerationResult.Failure)
+        val failure = result as TrainingGenerationResult.Failure
+        assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
+    }
+
+    @Test
+    fun mapsNetworkIoExceptionsIntoNetworkFailures() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(request: GenerateTrainingRequestDto): Response<GenerateTrainingResponseDto> {
+                    throw IOException("offline")
+                }
+            },
+            gson = Gson(),
+        )
+
+        val result = repository.generateWorkout(profile = sampleUserProfile(), userNote = null)
+
+        assertTrue(result is TrainingGenerationResult.Failure)
+        val failure = result as TrainingGenerationResult.Failure
+        assertEquals(TrainingGenerationErrorCode.Network, failure.error.code)
+    }
+
+    @Test(expected = CancellationException::class)
+    fun rethrowsCancellationException() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(request: GenerateTrainingRequestDto): Response<GenerateTrainingResponseDto> {
+                    throw CancellationException("cancelled")
+                }
+            },
+            gson = Gson(),
+        )
+
+        repository.generateWorkout(profile = sampleUserProfile(), userNote = null)
+    }
 }
 
 private fun sampleUserProfile(): UserProfile = UserProfile(
@@ -59,6 +132,31 @@ private fun sampleUserProfile(): UserProfile = UserProfile(
         AdditionalPromptField(
             label = "Поверхность",
             value = "Стадион",
+        ),
+    ),
+)
+
+private fun sampleResponse(): GenerateTrainingResponseDto = GenerateTrainingResponseDto(
+    schemaVersion = "mvp.v1",
+    training = RemoteWorkoutDto(
+        title = "Интервалы",
+        summary = "Чередование легкого бега и восстановления",
+        goal = "Build consistency",
+        estimatedDurationSec = 420,
+        disclaimer = "Приложение не является медицинской рекомендацией.",
+        steps = listOf(
+            RemoteWorkoutStepDto(
+                id = "step-1",
+                type = "warmup",
+                durationSec = 180,
+                voicePrompt = "Разминка.",
+            ),
+            RemoteWorkoutStepDto(
+                id = "step-2",
+                type = "run",
+                durationSec = 240,
+                voicePrompt = "Бежим.",
+            ),
         ),
     ),
 )

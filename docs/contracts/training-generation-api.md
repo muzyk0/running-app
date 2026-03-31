@@ -146,3 +146,24 @@ Current error codes:
 - `service_unavailable`: backend service or provider wiring is unavailable
 - `provider_error`: downstream generation failed
 - `request_timeout`: generation exceeded the configured request timeout
+
+## Runtime Configuration
+
+Backend runtime settings that affect this contract:
+
+- `RUNNING_APP_HTTP_ADDR`: bind address, default `:8080`
+- `RUNNING_APP_PROVIDER`: `codex` or `static`
+- `RUNNING_APP_REQUEST_TIMEOUT`: total request timeout, default `12s`
+- `RUNNING_APP_CODEX_BINARY`, `RUNNING_APP_CODEX_WORKDIR`, `RUNNING_APP_CODEX_MODEL`, `RUNNING_APP_CODEX_PROFILE`, `RUNNING_APP_CODEX_SANDBOX`: provider-specific Codex CLI settings
+
+For local Android builds, the backend base URL is passed through the Gradle property `runningAppTrainingApiBaseUrl`. The emulator-friendly default remains `http://10.0.2.2:8080/`.
+
+## Deployment Modes
+
+The same transport contract is used in all supported MVP deployment modes:
+
+- local binary execution via `go run ./cmd/server`
+- containerized execution from `backend/Dockerfile`
+- Linux service deployment via `backend/deploy/systemd/running-app-backend.service`
+
+The deployment mode changes process packaging and env injection only. The JSON request and response shapes above stay the same.

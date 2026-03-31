@@ -1,33 +1,137 @@
 # Running App
 
-Running App is a monorepo for a native Android client and a stateless Go backend that generates structured running workouts.
+Running App is a monorepo with two MVP deliverables:
+
+- `android-app/`: a native Android client built with Kotlin, Compose, Room, Hilt, and Retrofit
+- `backend/`: a stateless Go HTTP service that generates one normalized workout per request
+
+The Android app owns local user data, saved workouts, and session history. The backend only validates, normalizes, and returns workout envelopes.
 
 ## Repository Layout
 
-- `android-app/`: Gradle-based Android root with a pinned wrapper and bootstrap verification task
-- `backend/`: Go module for the backend service and future provider integrations
-- `docs/`: product notes, contracts, and implementation plans
-- `scripts/`: shared developer automation used by `make`
+- `android-app/`: Gradle root, Android application module, JVM unit tests, and JaCoCo coverage reporting
+- `backend/`: Go module, HTTP server, provider adapters, unit tests, and Docker packaging
+- `docs/contracts/`: authoritative API and schema documentation shared by Android and backend
+- `.github/workflows/ci.yml`: GitHub Actions workflow for Android and backend validation
+- `scripts/`: shell entrypoints used by `make`, local smoke checks, and coverage gates
 
-## Toolchains
+## Required Toolchains
 
-- Gradle wrapper: `9.3.1`
-- Android build JDK target: `17`
-- Go toolchain: `go1.26.1`
+- JDK 21 for Android Gradle tasks
+- Android SDK Platform 36 and Build Tools 36.0.0
+- Go 1.26.1
+- Docker with a running daemon for backend image builds
 
-The Android root is intentionally a bootstrap-only Gradle project in this task so `./gradlew help` can pass before the actual app module and Android SDK requirements land in the next iteration.
+On macOS, the repo scripts auto-detect JDK 21 when `JAVA_HOME` is unset. For direct Gradle commands, set `JAVA_HOME` yourself if your shell defaults to another JDK:
+
+```bash
+export JAVA_HOME="$(
+  /usr/libexec/java_home -v 21
+)"
+```
 
 ## Common Commands
 
-- `make format`: format tracked Go sources
-- `make lint`: syntax-check shell scripts, enforce Go formatting, run `go vet`, and validate the Gradle bootstrap
-- `make test`: run bootstrap smoke checks for the Android and backend roots
-- `make android-smoke`: run `cd android-app && ./gradlew help`
-- `make backend-smoke`: run `cd backend && go list ./... && go test ./...`
-- `make docker-smoke`: verify Docker is available and that the backend module resolves inside a container
+- `make format`: format Go sources
+- `make lint`: shell syntax checks, Go format verification, `go vet`, and Android Gradle smoke validation
+- `make test`: smoke-check the repo wiring, coverage tasks, and CI workflow presence
+- `make coverage`: run Android non-UI coverage verification and backend package coverage gates
+- `make ci`: run the same Android and backend checks used by GitHub Actions
+- `make android-ci`: run `assembleDebug`, `testDebugUnitTest`, `lintDebug`, and Android JaCoCo verification
+- `make backend-ci`: run backend coverage, `go vet`, and `docker build -t running-app-backend .`
 
-## Local Bootstrap
+## Backend: Local Run
 
-1. Run `make test`
-2. Run `cd android-app && ./gradlew help`
-3. Run `cd backend && go test ./...`
+The backend defaults to `:8080` and the `codex` provider. For repeatable local testing without the Codex CLI, use the static provider:
+
+```bash
+cd backend
+export RUNNING_APP_PROVIDER=static
+go run ./cmd/server
+```
+
+Required and optional backend environment variables:
+
+- `RUNNING_APP_HTTP_ADDR`: listen address, default `:8080`
+- `RUNNING_APP_PROVIDER`: `codex` or `static`, default `codex`
+- `RUNNING_APP_REQUEST_TIMEOUT`: generation timeout, default `12s`
+- `RUNNING_APP_SHUTDOWN_TIMEOUT`: graceful shutdown timeout, default `10s`
+- `RUNNING_APP_READ_HEADER_TIMEOUT`: default `5s`
+- `RUNNING_APP_READ_TIMEOUT`: default `15s`
+- `RUNNING_APP_WRITE_TIMEOUT`: default `15s`
+- `RUNNING_APP_IDLE_TIMEOUT`: default `30s`
+- `RUNNING_APP_LOG_LEVEL`: `DEBUG`, `INFO`, `WARN`, or `ERROR`, default `INFO`
+- `RUNNING_APP_CODEX_BINARY`: Codex CLI binary path, default `codex`
+- `RUNNING_APP_CODEX_WORKDIR`: optional working directory passed to `codex exec --cd`
+- `RUNNING_APP_CODEX_MODEL`: optional model override
+- `RUNNING_APP_CODEX_PROFILE`: optional Codex profile name
+- `RUNNING_APP_CODEX_SANDBOX`: Codex sandbox mode, default `read-only`
+
+## Android: Local Run
+
+The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine.
+
+Typical local flow:
+
+```bash
+cd android-app
+./gradlew app:assembleDebug \
+  -PrunningAppTrainingApiBaseUrl=http://10.0.2.2:8080/
+./gradlew app:testDebugUnitTest
+```
+
+For a physical device, point the property at a reachable host, for example:
+
+```bash
+./gradlew app:assembleDebug \
+  -PrunningAppTrainingApiBaseUrl=http://192.168.1.50:8080/
+```
+
+## Coverage And Validation
+
+Android coverage is generated from JVM unit tests and verified against the critical non-UI classes that contain reducer, repository, mapper, storage, startup, session, and tracking logic:
+
+```bash
+./scripts/android-coverage.sh
+```
+
+Backend coverage checks the critical packages at an 80% minimum and also writes `backend/coverage.out` for `go tool cover` consumers:
+
+```bash
+./scripts/backend-coverage.sh
+```
+
+The GitHub Actions workflow runs the same repo-owned entrypoints:
+
+- Android: `./scripts/android-ci.sh`
+- Backend: `./scripts/backend-ci.sh`
+
+## Backend Deployment Modes
+
+Local binary:
+
+```bash
+cd backend
+RUNNING_APP_PROVIDER=static go run ./cmd/server
+```
+
+Container image:
+
+```bash
+cd backend
+docker build -t running-app-backend .
+docker run --rm -p 8080:8080 \
+  -e RUNNING_APP_PROVIDER=static \
+  running-app-backend
+```
+
+Systemd service:
+
+- Use `backend/deploy/systemd/running-app-backend.service`
+- Supply environment variables through `/etc/running-app/backend.env`
+- Install the built binary as `/usr/local/bin/running-app-backend`
+
+## Contract References
+
+- API contract: `docs/contracts/training-generation-api.md`
+- Training schema: `docs/contracts/training-schema-v1.md`

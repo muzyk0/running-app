@@ -227,10 +227,10 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Modify: `docs/contracts/training-generation-api.md`
 - Modify: `docs/contracts/training-schema-v1.md`
 
-- [ ] Add CI jobs that run Android unit tests and lint plus backend tests, vet, and docker build
-- [ ] Add coverage reporting for backend logic and Android non-UI modules
-- [ ] Run `cd android-app && ./gradlew app:assembleDebug app:testDebugUnitTest app:lintDebug`
-- [ ] Run `cd backend && go test ./... && go vet ./... && docker build -t running-app-backend .`
-- [ ] Verify critical backend packages and Android non-UI modules reach 80%+ unit coverage
-- [ ] Update `README.md` with local Android and backend run instructions, required env vars, and deployment modes
-- [ ] Move this plan to `docs/plans/completed/` after implementation finishes
+- [x] Add CI jobs that run Android unit tests and lint plus backend tests, vet, and docker build
+- [x] Add coverage reporting for backend logic and Android non-UI modules
+- [x] Run `cd android-app && ./gradlew app:assembleDebug app:testDebugUnitTest app:lintDebug`
+- [x] Run `cd backend && go test ./... && go vet ./... && docker build -t running-app-backend .`
+- [x] Verify critical backend packages and Android non-UI modules reach 80%+ unit coverage
+- [x] Update `README.md` with local Android and backend run instructions, required env vars, and deployment modes
+- [x] Move this plan to `docs/plans/completed/` after implementation finishes

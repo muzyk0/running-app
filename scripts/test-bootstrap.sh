@@ -14,6 +14,12 @@ fi
 grep -q '^toolchain go1.26.1$' "$ROOT_DIR/backend/go.mod"
 grep -q '^rootProject.name = "running-app-android"$' "$ROOT_DIR/android-app/settings.gradle.kts"
 grep -q '^distributionUrl=.*gradle-9.3.1-bin.zip$' "$ROOT_DIR/android-app/gradle/wrapper/gradle-wrapper.properties"
+grep -q '^ci:' "$ROOT_DIR/Makefile"
+grep -q '^coverage:' "$ROOT_DIR/Makefile"
+grep -q 'jacocoDebugUnitTestCoverageVerification' "$ROOT_DIR/android-app/app/build.gradle.kts"
+test -f "$ROOT_DIR/.github/workflows/ci.yml"
+test -f "$ROOT_DIR/scripts/backend-coverage.sh"
+test -f "$ROOT_DIR/scripts/android-coverage.sh"
 
 "$ROOT_DIR/scripts/android-gradle-smoke.sh"
 "$ROOT_DIR/scripts/backend-go-smoke.sh"

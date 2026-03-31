@@ -24,4 +24,4 @@ if ((${#go_files[@]} > 0)); then
 fi
 
 (cd "$ROOT_DIR/backend" && go vet ./...)
-(cd "$ROOT_DIR/android-app" && ./gradlew --no-daemon help >/dev/null)
+"$ROOT_DIR/scripts/android-gradle-smoke.sh"

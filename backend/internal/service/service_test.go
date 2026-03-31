@@ -142,6 +142,33 @@ func TestGenerateTrainingPropagatesProviderFailure(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingRejectsMissingProvider(t *testing.T) {
+	service := NewTrainingService(nil, prompt.NewBuilder(), schema.NewNormalizer(), testLogger())
+
+	_, err := service.GenerateTraining(context.Background(), validRequest())
+	if !errors.Is(err, ErrProviderNotConfigured) {
+		t.Fatalf("GenerateTraining() error = %v, want %v", err, ErrProviderNotConfigured)
+	}
+}
+
+func TestNewTrainingServiceUsesDefaultBuilderAndNormalizer(t *testing.T) {
+	service := NewTrainingService(provider.NewStaticGenerator(), nil, nil, nil)
+
+	result, err := service.GenerateTraining(context.Background(), validRequest())
+	if err != nil {
+		t.Fatalf("GenerateTraining() error = %v", err)
+	}
+	if result.SchemaVersion != provider.SchemaVersionMVPv1 {
+		t.Fatalf("SchemaVersion = %q, want %q", result.SchemaVersion, provider.SchemaVersionMVPv1)
+	}
+	if result.Training.Title == "" {
+		t.Fatal("Training.Title = empty, want populated title")
+	}
+	if len(result.Training.Steps) == 0 {
+		t.Fatal("Training.Steps = empty, want normalized steps")
+	}
+}
+
 type stubGenerator struct {
 	request  provider.CompletionRequest
 	response provider.CompletionResponse

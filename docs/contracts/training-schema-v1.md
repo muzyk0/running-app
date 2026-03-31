@@ -78,3 +78,20 @@ The backend prompt instructs providers to:
 - include the MVP disclaimer verbatim
 - emit one workout only, not a weekly plan
 - keep every step within the canonical MVP shape
+
+## Client Persistence Notes
+
+- Android stores its own local workout identifier and does not treat backend `step.id` values as database primary keys
+- Android persists `schema_version` alongside saved workouts so normalized envelopes remain traceable after local edits
+- `estimated_duration_sec` should be treated as backend-authored but still safe for local recomputation when the user edits a saved workout
+
+## Verification Notes
+
+CI-backed unit coverage verifies the normalization rules exercised by the backend implementation, including:
+
+- bare `training` objects and full envelopes
+- markdown-wrapped JSON extraction
+- canonical step-type alias mapping
+- duplicate or missing step ID repair
+- fallback disclaimer, goal, and `voice_prompt` behavior
+- rejection of malformed JSON and unsupported step types

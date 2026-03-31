@@ -7,4 +7,9 @@ source "$ROOT_DIR/scripts/lib/android-env.sh"
 ensure_android_java_home
 
 cd "$ROOT_DIR/android-app"
-./gradlew --no-daemon help >/dev/null
+./gradlew --no-daemon \
+  app:assembleDebug \
+  app:testDebugUnitTest \
+  app:lintDebug \
+  app:jacocoDebugUnitTestReport \
+  app:jacocoDebugUnitTestCoverageVerification
