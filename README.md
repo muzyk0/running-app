@@ -44,8 +44,27 @@ export JAVA_HOME="$(
 - `make backend-ci`: run backend coverage, `go vet`, and `docker build -t running-app-backend .`
 - `make android-coverage`: run only the Android JVM coverage report and threshold gate
 - `make backend-coverage`: run backend tests plus the per-package coverage threshold gate
+- `make android-build`: build the debug APK from `android-app/`
+- `make android-install`: install the debug APK to a connected emulator/device
+- `make backend-build`: build `backend/bin/running-app-backend`
+- `make backend-run`: start the backend from `backend/` with local `.env` support
 
 ## Backend: Local Run
+
+Common local commands from the repo root:
+
+```bash
+make backend-build
+make backend-run
+make android-build
+make android-install
+```
+
+If you need a non-default Android backend URL:
+
+```bash
+make android-build TRAINING_API_BASE_URL=http://192.168.1.50:8080/
+```
 
 The backend defaults to `127.0.0.1:8080` and the `codex` provider, so fresh local runs stay bound to loopback instead of every interface. For repeatable local testing without the Codex CLI, use the static provider:
 
@@ -144,6 +163,11 @@ Systemd service:
 - Use `backend/deploy/systemd/running-app-backend.service`
 - Supply environment variables through `/etc/running-app/backend.env`
 - Install the built binary as `/usr/local/bin/running-app-backend`
+- Debian/Ubuntu one-click install script: `backend/deploy/systemd/install-debian.sh`
+- Full install walkthrough: `backend/deploy/systemd/README.md`
+- Recommended reverse proxy: `backend/deploy/nginx/running-app-backend.conf`
+- Debian/Ubuntu Nginx installer: `backend/deploy/nginx/install-debian.sh`
+- Nginx walkthrough: `backend/deploy/nginx/README.md`
 
 ## Contract References
 

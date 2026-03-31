@@ -2,11 +2,32 @@ SHELL := /bin/bash
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR := $(ROOT_DIR)scripts
+TRAINING_API_BASE_URL ?= http://10.0.2.2:8080/
 
-.PHONY: help format lint test ci coverage android-smoke backend-smoke docker-smoke android-ci backend-ci android-coverage backend-coverage
+.PHONY: help format lint test ci coverage android-smoke backend-smoke docker-smoke android-ci backend-ci android-coverage backend-coverage android-build android-install backend-build backend-run
 
 help:
-	@printf "Targets: format lint test ci coverage android-smoke backend-smoke docker-smoke android-ci backend-ci android-coverage backend-coverage\n"
+	@printf "%s\n" \
+		"Targets:" \
+		"  format            Format repo-owned sources" \
+		"  lint              Run repo lint checks" \
+		"  test              Run bootstrap test suite" \
+		"  ci                Run Android and backend CI entrypoints" \
+		"  coverage          Run Android and backend coverage entrypoints" \
+		"  android-smoke     Verify Android Gradle wrapper and module wiring" \
+		"  backend-smoke     Verify backend Go module resolution and tests" \
+		"  docker-smoke      Verify backend Docker build context" \
+		"  android-ci        Run Android CI script" \
+		"  backend-ci        Run backend CI script" \
+		"  android-coverage  Run Android coverage script" \
+		"  backend-coverage  Run backend coverage script" \
+		"  android-build     Build debug APK from android-app/" \
+		"  android-install   Install debug APK via adb" \
+		"  backend-build     Build backend binary to backend/bin/running-app-backend" \
+		"  backend-run       Run backend server from backend/" \
+		"" \
+		"Variables:" \
+		"  TRAINING_API_BASE_URL=$(TRAINING_API_BASE_URL)"
 
 format:
 	@$(SCRIPTS_DIR)/format.sh
@@ -45,3 +66,15 @@ android-coverage:
 
 backend-coverage:
 	@$(SCRIPTS_DIR)/backend-coverage.sh
+
+android-build:
+	@TRAINING_API_BASE_URL="$(TRAINING_API_BASE_URL)" $(SCRIPTS_DIR)/android-build.sh
+
+android-install:
+	@TRAINING_API_BASE_URL="$(TRAINING_API_BASE_URL)" $(SCRIPTS_DIR)/android-install.sh
+
+backend-build:
+	@$(SCRIPTS_DIR)/backend-build.sh
+
+backend-run:
+	@$(SCRIPTS_DIR)/backend-run.sh
