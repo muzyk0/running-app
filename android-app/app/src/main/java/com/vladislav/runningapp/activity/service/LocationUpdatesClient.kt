@@ -4,5 +4,11 @@ import com.vladislav.runningapp.activity.ActivityRoutePoint
 import kotlinx.coroutines.flow.Flow
 
 interface LocationUpdatesClient {
-    fun locationUpdates(): Flow<ActivityRoutePoint>
+    suspend fun openSession(): LocationUpdatesSession
+}
+
+interface LocationUpdatesSession {
+    val updates: Flow<ActivityRoutePoint>
+
+    suspend fun close()
 }

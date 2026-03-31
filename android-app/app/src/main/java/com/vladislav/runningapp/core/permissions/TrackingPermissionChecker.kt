@@ -2,7 +2,8 @@ package com.vladislav.runningapp.core.permissions
 
 import android.content.Context
 
-const val MissingTrackedSessionPermissionsMessage = "Для GPS-трекинга и активных сессий не хватает системных разрешений."
+const val MissingTrackedSessionPermissionsMessage =
+    "Для GPS-трекинга и активных сессий нужны системные разрешения, включая точную геолокацию."
 
 interface TrackingPermissionChecker {
     fun currentState(): PermissionRequirementsState

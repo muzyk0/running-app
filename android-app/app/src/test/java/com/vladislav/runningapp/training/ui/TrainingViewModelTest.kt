@@ -3,6 +3,7 @@ package com.vladislav.runningapp.training.ui
 import com.vladislav.runningapp.activity.ActivitySessionType
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.ActivityTrackerState
+import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
 import com.vladislav.runningapp.core.permissions.RequirementState
@@ -29,7 +30,7 @@ class TrainingViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun startSelectedWorkoutReturnsFalseWhenAnotherSessionIsActive() = runTest(mainDispatcherRule.dispatcher) {
+    fun startSelectedWorkoutRejectsStartWhenAnotherSessionIsActive() = runTest(mainDispatcherRule.dispatcher) {
         val tracker = FakeActivityTracker(
             initialState = ActivityTrackerState(
                 sessionId = "active-session",
@@ -47,7 +48,7 @@ class TrainingViewModelTest {
 
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
-        assertFalse(viewModel.onStartSelectedWorkout())
+        viewModel.onStartSelectedWorkout()
         assertTrue(tracker.startedWorkouts.isEmpty())
         assertEquals(
             "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
@@ -104,7 +105,8 @@ class TrainingViewModelTest {
     }
 
     @Test
-    fun startSelectedWorkoutReturnsFalseWhenTrackingPermissionsAreMissing() = runTest(mainDispatcherRule.dispatcher) {
+    fun startSelectedWorkoutSurfacesPermissionErrorWhenTrackingPermissionsAreMissing() =
+        runTest(mainDispatcherRule.dispatcher) {
         val tracker = FakeActivityTracker()
         val viewModel = TrainingViewModel(
             workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
@@ -115,12 +117,58 @@ class TrainingViewModelTest {
 
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
-        assertFalse(viewModel.onStartSelectedWorkout())
+        viewModel.onStartSelectedWorkout()
         assertTrue(tracker.startedWorkouts.isEmpty())
         assertEquals(
             MissingTrackedSessionPermissionsMessage,
             viewModel.uiState.value.errorMessage,
         )
+    }
+
+    @Test
+    fun startSelectedWorkoutSurfacesTrackerStartFailureWithoutOpenSignal() = runTest(mainDispatcherRule.dispatcher) {
+        val tracker = FakeActivityTracker(startPlannedWorkoutResult = false)
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
+            activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onStartSelectedWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(tracker.startedWorkouts.isEmpty())
+        assertEquals(TrackedSessionStartFailureMessage, viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.shouldOpenActiveSession)
+        assertFalse(viewModel.uiState.value.isStartingWorkout)
+    }
+
+    @Test
+    fun startSelectedWorkoutEmitsOpenSignalOnlyAfterTrackerStarts() = runTest(mainDispatcherRule.dispatcher) {
+        val tracker = FakeActivityTracker()
+        val viewModel = TrainingViewModel(
+            workoutRepository = FakeWorkoutRepository(workouts = listOf(sampleWorkout())),
+            activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onStartSelectedWorkout()
+
+        assertFalse(viewModel.uiState.value.shouldOpenActiveSession)
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, tracker.startedWorkouts.size)
+        assertTrue(viewModel.uiState.value.shouldOpenActiveSession)
+        assertFalse(viewModel.uiState.value.isStartingWorkout)
+
+        viewModel.onActiveSessionOpened()
+
+        assertFalse(viewModel.uiState.value.shouldOpenActiveSession)
     }
 
     @Test
@@ -189,15 +237,19 @@ class TrainingViewModelTest {
 
     private class FakeActivityTracker(
         initialState: ActivityTrackerState = ActivityTrackerState(),
+        private val startPlannedWorkoutResult: Boolean = true,
     ) : ActivityTracker {
         private val mutableState = MutableStateFlow(initialState)
         val startedWorkouts = mutableListOf<Workout>()
 
         override val trackerState: StateFlow<ActivityTrackerState> = mutableState
 
-        override fun startFreeRun() = Unit
+        override suspend fun startFreeRun(): Boolean = true
 
-        override fun startPlannedWorkout(workout: Workout) {
+        override suspend fun startPlannedWorkout(workout: Workout): Boolean {
+            if (!startPlannedWorkoutResult) {
+                return false
+            }
             startedWorkouts += workout
             mutableState.value = ActivityTrackerState(
                 sessionId = "planned-session",
@@ -207,6 +259,7 @@ class TrainingViewModelTest {
                 workoutTitle = workout.title,
                 isTracking = true,
             )
+            return true
         }
 
         override fun stopActiveSession() {

@@ -3,6 +3,7 @@ package com.vladislav.runningapp.training.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.activity.ActivityTracker
+import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
 import com.vladislav.runningapp.core.di.DefaultDispatcher
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
@@ -26,6 +27,8 @@ data class TrainingUiState(
     val editorState: WorkoutEditorState? = null,
     val pendingDeleteWorkoutId: String? = null,
     val errorMessage: String? = null,
+    val isStartingWorkout: Boolean = false,
+    val shouldOpenActiveSession: Boolean = false,
 ) {
     val selectedWorkout: Workout?
         get() = workouts.firstOrNull { workout -> workout.id == selectedWorkoutId }
@@ -207,27 +210,48 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
-    fun onStartSelectedWorkout(): Boolean {
-        val selectedWorkout = _uiState.value.selectedWorkout ?: return false
+    fun onStartSelectedWorkout() {
+        if (_uiState.value.isStartingWorkout) {
+            return
+        }
+        val selectedWorkout = _uiState.value.selectedWorkout ?: return
         if (activityTracker.trackerState.value.isTracking) {
             _uiState.update { state ->
                 state.copy(
                     errorMessage = "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
                 )
             }
-            return false
+            return
         }
         if (!trackingPermissionChecker.currentState().canStartTrackedSessions) {
             _uiState.update { state ->
                 state.copy(errorMessage = MissingTrackedSessionPermissionsMessage)
             }
-            return false
+            return
         }
         _uiState.update { state ->
-            state.copy(errorMessage = null)
+            state.copy(
+                errorMessage = null,
+                isStartingWorkout = true,
+                shouldOpenActiveSession = false,
+            )
         }
-        activityTracker.startPlannedWorkout(selectedWorkout)
-        return true
+        viewModelScope.launch(defaultDispatcher) {
+            val started = activityTracker.startPlannedWorkout(selectedWorkout)
+            _uiState.update { state ->
+                state.copy(
+                    errorMessage = if (started) null else TrackedSessionStartFailureMessage,
+                    isStartingWorkout = false,
+                    shouldOpenActiveSession = started,
+                )
+            }
+        }
+    }
+
+    fun onActiveSessionOpened() {
+        _uiState.update { state ->
+            state.copy(shouldOpenActiveSession = false)
+        }
     }
 
     fun onSaveWorkout() {

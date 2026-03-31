@@ -51,6 +51,12 @@ fun TrainingScreen(
     LaunchedEffect(focusedWorkoutId) {
         focusedWorkoutId?.takeIf { workoutId -> workoutId.isNotBlank() }?.let(viewModel::onFocusWorkout)
     }
+    LaunchedEffect(uiState.shouldOpenActiveSession) {
+        if (uiState.shouldOpenActiveSession) {
+            onOpenActiveSession()
+            viewModel.onActiveSessionOpened()
+        }
+    }
 
     TrainingScreen(
         state = uiState,
@@ -63,11 +69,7 @@ fun TrainingScreen(
         onDismissDeleteWorkout = viewModel::onDismissDeleteWorkout,
         onConfirmDeleteWorkout = viewModel::onConfirmDeleteWorkout,
         onSaveCopy = viewModel::onSaveCopyOfSelectedWorkout,
-        onStartWorkout = {
-            if (viewModel.onStartSelectedWorkout()) {
-                onOpenActiveSession()
-            }
-        },
+        onStartWorkout = viewModel::onStartSelectedWorkout,
         onTitleChanged = viewModel::onTitleChanged,
         onSummaryChanged = viewModel::onSummaryChanged,
         onGoalChanged = viewModel::onGoalChanged,
@@ -175,6 +177,7 @@ private fun TrainingScreen(
                 WorkoutDetailCard(
                     workout = selectedWorkout,
                     canStartTrackedSessions = canStartTrackedSessions,
+                    isStartingWorkout = state.isStartingWorkout,
                     onEditWorkout = onEditWorkout,
                     onSaveCopy = onSaveCopy,
                     onStartWorkout = onStartWorkout,
@@ -333,6 +336,7 @@ private fun EmptyWorkoutsCard(
 private fun WorkoutDetailCard(
     workout: Workout,
     canStartTrackedSessions: Boolean,
+    isStartingWorkout: Boolean,
     onEditWorkout: () -> Unit,
     onSaveCopy: () -> Unit,
     onStartWorkout: () -> Unit,
@@ -422,7 +426,7 @@ private fun WorkoutDetailCard(
                 ) {
                     Button(
                         onClick = onStartWorkout,
-                        enabled = canStartTrackedSessions,
+                        enabled = canStartTrackedSessions && !isStartingWorkout,
                     ) {
                         Text(text = stringResource(R.string.training_start_action))
                     }

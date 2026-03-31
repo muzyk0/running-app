@@ -16,11 +16,11 @@
     <string name="permission_status_available">Готово</string>
     <string name="permission_status_missing">Нужно включить</string>
     <string name="permission_status_not_required">Не требуется</string>
-    <string name="permission_location">Геолокация</string>
+    <string name="permission_location">Точная геолокация</string>
     <string name="permission_notifications">Уведомления</string>
     <string name="permission_foreground_tracking">Foreground tracking</string>
     <string name="permissions_summary_ready">Можно запускать свободный бег и будущие активные тренировки.</string>
-    <string name="permissions_summary_missing">Для GPS-трекинга и активных сессий не хватает системных разрешений.</string>
+    <string name="permissions_summary_missing">Для GPS-трекинга и активных сессий нужны системные разрешения, включая точную геолокацию.</string>
     <string name="screen_profile_title">Профиль пользователя</string>
     <string name="screen_profile_body">Локальный профиль хранится на устройстве и используется для AI-запросов.</string>
     <string name="profile_onboarding_title">Первичная настройка профиля</string>

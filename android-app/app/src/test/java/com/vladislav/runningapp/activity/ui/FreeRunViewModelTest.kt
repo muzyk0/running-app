@@ -2,6 +2,7 @@ package com.vladislav.runningapp.activity.ui
 
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.ActivityTrackerState
+import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
 import com.vladislav.runningapp.core.permissions.RequirementState
@@ -53,19 +54,42 @@ class FreeRunViewModelTest {
         assertEquals(true, tracker.trackerState.value.isTracking)
     }
 
-    private class FakeActivityTracker : ActivityTracker {
+    @Test
+    fun onStartFreeRunSurfacesTrackerStartFailure() = runTest(mainDispatcherRule.dispatcher) {
+        val tracker = FakeActivityTracker(startFreeRunResult = false)
+        val viewModel = FreeRunViewModel(
+            activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
+        )
+
+        viewModel.onStartFreeRun()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(TrackedSessionStartFailureMessage, viewModel.uiState.value.errorMessage)
+        assertFalse(tracker.trackerState.value.isTracking)
+        assertFalse(viewModel.uiState.value.isStarting)
+    }
+
+    private class FakeActivityTracker(
+        private val startFreeRunResult: Boolean = true,
+    ) : ActivityTracker {
         private val mutableState = MutableStateFlow(ActivityTrackerState())
 
         override val trackerState: StateFlow<ActivityTrackerState> = mutableState
 
-        override fun startFreeRun() {
+        override suspend fun startFreeRun(): Boolean {
+            if (!startFreeRunResult) {
+                return false
+            }
             mutableState.value = ActivityTrackerState(
                 sessionId = "free-run",
                 isTracking = true,
             )
+            return true
         }
 
-        override fun startPlannedWorkout(workout: com.vladislav.runningapp.training.domain.Workout) = Unit
+        override suspend fun startPlannedWorkout(workout: com.vladislav.runningapp.training.domain.Workout): Boolean =
+            true
 
         override fun stopActiveSession() {
             mutableState.value = ActivityTrackerState()

@@ -12,5 +12,5 @@ interface WorkoutSessionController {
 
     fun resumeWorkout()
 
-    fun stopWorkout()
+    fun stopWorkout(): WorkoutSessionState
 }

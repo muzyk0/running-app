@@ -6,9 +6,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface ActivityTracker {
     val trackerState: StateFlow<ActivityTrackerState>
 
-    fun startFreeRun()
+    suspend fun startFreeRun(): Boolean
 
-    fun startPlannedWorkout(workout: Workout)
+    suspend fun startPlannedWorkout(workout: Workout): Boolean
 
     fun stopActiveSession()
 }
+
+const val TrackedSessionStartFailureMessage =
+    "Не удалось запустить активную сессию. Проверьте точную геолокацию и повторите попытку."

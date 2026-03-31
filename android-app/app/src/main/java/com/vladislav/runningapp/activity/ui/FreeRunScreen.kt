@@ -39,6 +39,7 @@ fun FreeRunScreen(
     FreeRunScreen(
         state = uiState.trackerState,
         errorMessage = uiState.errorMessage,
+        isStarting = uiState.isStarting,
         canStartTrackedSessions = canStartTrackedSessions,
         onStartFreeRun = viewModel::onStartFreeRun,
         onStopFreeRun = viewModel::onStopFreeRun,
@@ -50,6 +51,7 @@ fun FreeRunScreen(
 private fun FreeRunScreen(
     state: ActivityTrackerState,
     errorMessage: String?,
+    isStarting: Boolean,
     canStartTrackedSessions: Boolean,
     onStartFreeRun: () -> Unit,
     onStopFreeRun: () -> Unit,
@@ -97,6 +99,7 @@ private fun FreeRunScreen(
 
             else -> FreeRunStartCard(
                 canStartTrackedSessions = canStartTrackedSessions,
+                isStarting = isStarting,
                 onStartFreeRun = onStartFreeRun,
             )
         }
@@ -106,6 +109,7 @@ private fun FreeRunScreen(
 @Composable
 private fun FreeRunStartCard(
     canStartTrackedSessions: Boolean,
+    isStarting: Boolean,
     onStartFreeRun: () -> Unit,
 ) {
     Card {
@@ -125,7 +129,7 @@ private fun FreeRunStartCard(
             )
             Button(
                 onClick = onStartFreeRun,
-                enabled = canStartTrackedSessions,
+                enabled = canStartTrackedSessions && !isStarting,
             ) {
                 Text(text = stringResource(R.string.free_run_start_action))
             }

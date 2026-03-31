@@ -30,12 +30,9 @@ object PermissionSnapshotFactory {
         }
     }
 
-    private fun isLocationGranted(context: Context): Boolean = listOf(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    ).any { permission ->
-        isPermissionGranted(context, permission)
-    }
+    private fun isLocationGranted(context: Context): Boolean = preciseTrackedSessionLocationGranted(
+        fineLocationGranted = isPermissionGranted(context, Manifest.permission.ACCESS_FINE_LOCATION),
+    )
 
     private fun isPermissionGranted(context: Context, permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
@@ -66,3 +63,7 @@ object PermissionSnapshotFactory {
 
     private fun PackageInfo.permissionsOrEmpty(): Set<String> = requestedPermissions?.toSet().orEmpty()
 }
+
+internal fun preciseTrackedSessionLocationGranted(
+    fineLocationGranted: Boolean,
+): Boolean = fineLocationGranted

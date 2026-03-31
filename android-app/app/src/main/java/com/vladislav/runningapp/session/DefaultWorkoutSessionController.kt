@@ -41,8 +41,12 @@ class DefaultWorkoutSessionController @Inject constructor(
         applyAction(WorkoutSessionAction.Resume)
     }
 
-    override fun stopWorkout() {
-        applyAction(WorkoutSessionAction.Stop)
+    override fun stopWorkout(): WorkoutSessionState = synchronized(mutationLock) {
+        val finalState = mutableSessionState.value
+        val transition = WorkoutSessionEngine.reduce(finalState, WorkoutSessionAction.Stop)
+        mutableSessionState.value = transition.state
+        synchronizeTickerLocked(transition.state.status)
+        finalState
     }
 
     private fun applyAction(action: WorkoutSessionAction) {
