@@ -38,8 +38,12 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
-func TestGenerateTrainingSuccess(t *testing.T) {
+func TestGenerateTrainingSuccessStreamsEvents(t *testing.T) {
 	stub := &stubTrainingService{
+		progress: []provider.ProgressChunk{
+			{Message: "building training prompt"},
+			{Message: "normalizing final workout"},
+		},
 		response: provider.TrainingEnvelope{
 			SchemaVersion: "mvp.v1",
 			Training: provider.Training{
@@ -63,6 +67,9 @@ func TestGenerateTrainingSuccess(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
 	}
+	if got := response.Header().Get("Content-Type"); got != "text/event-stream; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want %q", got, "text/event-stream; charset=utf-8")
+	}
 	if !stub.sawDeadline {
 		t.Fatal("service context did not include a deadline")
 	}
@@ -71,6 +78,36 @@ func TestGenerateTrainingSuccess(t *testing.T) {
 	}
 	if stub.request.Locale != "ru-RU" {
 		t.Fatalf("locale = %q, want %q", stub.request.Locale, "ru-RU")
+	}
+
+	events := parseSSEEvents(t, response.Body.String())
+	if len(events) != 3 {
+		t.Fatalf("len(events) = %d, want %d", len(events), 3)
+	}
+	if events[0].Name != string(provider.StreamEventLog) {
+		t.Fatalf("events[0].Name = %q, want %q", events[0].Name, provider.StreamEventLog)
+	}
+	if events[1].Name != string(provider.StreamEventLog) {
+		t.Fatalf("events[1].Name = %q, want %q", events[1].Name, provider.StreamEventLog)
+	}
+	if events[2].Name != string(provider.StreamEventCompleted) {
+		t.Fatalf("events[2].Name = %q, want %q", events[2].Name, provider.StreamEventCompleted)
+	}
+
+	var firstLog provider.ProgressChunk
+	if err := json.Unmarshal([]byte(events[0].Data), &firstLog); err != nil {
+		t.Fatalf("decode first log payload: %v", err)
+	}
+	if firstLog.Message != "building training prompt" {
+		t.Fatalf("first log message = %q, want %q", firstLog.Message, "building training prompt")
+	}
+
+	var completed provider.TrainingEnvelope
+	if err := json.Unmarshal([]byte(events[2].Data), &completed); err != nil {
+		t.Fatalf("decode completed payload: %v", err)
+	}
+	if completed.Training.Title != "Тестовая тренировка" {
+		t.Fatalf("completed training title = %q, want %q", completed.Training.Title, "Тестовая тренировка")
 	}
 }
 
@@ -86,18 +123,43 @@ func TestGenerateTrainingRejectsInvalidLocale(t *testing.T) {
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusBadRequest)
 	}
+	if got := response.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want %q", got, "application/json; charset=utf-8")
+	}
 }
 
-func TestGenerateTrainingProviderError(t *testing.T) {
-	router := NewRouter(testLogger(), &stubTrainingService{err: errors.New("boom")}, 2*time.Second)
+func TestGenerateTrainingProviderErrorStreamsTerminalErrorEvent(t *testing.T) {
+	router := NewRouter(testLogger(), &stubTrainingService{
+		progress: []provider.ProgressChunk{{Message: "generator started"}},
+		err:      errors.New("boom"),
+	}, 2*time.Second)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)
 
-	if response.Code != http.StatusBadGateway {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusBadGateway)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+
+	events := parseSSEEvents(t, response.Body.String())
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want %d", len(events), 2)
+	}
+	if events[0].Name != string(provider.StreamEventLog) {
+		t.Fatalf("events[0].Name = %q, want %q", events[0].Name, provider.StreamEventLog)
+	}
+	if events[1].Name != string(provider.StreamEventError) {
+		t.Fatalf("events[1].Name = %q, want %q", events[1].Name, provider.StreamEventError)
+	}
+
+	var payload errorEnvelope
+	if err := json.Unmarshal([]byte(events[1].Data), &payload); err != nil {
+		t.Fatalf("decode error payload: %v", err)
+	}
+	if payload.Error.Code != "provider_error" {
+		t.Fatalf("error.code = %q, want %q", payload.Error.Code, "provider_error")
 	}
 }
 
@@ -123,19 +185,30 @@ func TestGenerateTrainingReturnsServiceUnavailableWithoutService(t *testing.T) {
 }
 
 func TestGenerateTrainingReturnsTimeoutError(t *testing.T) {
-	router := NewRouter(testLogger(), &stubTrainingService{err: context.DeadlineExceeded}, 25*time.Millisecond)
+	router := NewRouter(testLogger(), &stubTrainingService{
+		progress: []provider.ProgressChunk{{Message: "generator started"}},
+		err:      context.DeadlineExceeded,
+	}, 25*time.Millisecond)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)
 
-	if response.Code != http.StatusGatewayTimeout {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusGatewayTimeout)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+
+	events := parseSSEEvents(t, response.Body.String())
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want %d", len(events), 2)
+	}
+	if events[1].Name != string(provider.StreamEventError) {
+		t.Fatalf("events[1].Name = %q, want %q", events[1].Name, provider.StreamEventError)
 	}
 
 	var payload errorEnvelope
-	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal([]byte(events[1].Data), &payload); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if payload.Error.Code != "request_timeout" {
@@ -144,19 +217,30 @@ func TestGenerateTrainingReturnsTimeoutError(t *testing.T) {
 }
 
 func TestGenerateTrainingReturnsProviderNotConfiguredError(t *testing.T) {
-	router := NewRouter(testLogger(), &stubTrainingService{err: service.ErrProviderNotConfigured}, 2*time.Second)
+	router := NewRouter(testLogger(), &stubTrainingService{
+		progress: []provider.ProgressChunk{{Message: "generator started"}},
+		err:      service.ErrProviderNotConfigured,
+	}, 2*time.Second)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)
 
-	if response.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+
+	events := parseSSEEvents(t, response.Body.String())
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want %d", len(events), 2)
+	}
+	if events[1].Name != string(provider.StreamEventError) {
+		t.Fatalf("events[1].Name = %q, want %q", events[1].Name, provider.StreamEventError)
 	}
 
 	var payload errorEnvelope
-	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal([]byte(events[1].Data), &payload); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if payload.Error.Code != "service_unavailable" {
@@ -217,15 +301,67 @@ func testLogger() *slog.Logger {
 
 type stubTrainingService struct {
 	response    provider.TrainingEnvelope
+	progress    []provider.ProgressChunk
 	err         error
 	request     provider.GenerateRequest
 	sawDeadline bool
 }
 
-func (s *stubTrainingService) GenerateTraining(ctx context.Context, request provider.GenerateRequest) (provider.TrainingEnvelope, error) {
+func (s *stubTrainingService) GenerateTrainingStream(
+	ctx context.Context,
+	request provider.GenerateRequest,
+	report provider.ProgressReporter,
+) (provider.TrainingEnvelope, error) {
 	s.request = request
 	_, s.sawDeadline = ctx.Deadline()
+	for _, chunk := range s.progress {
+		if report != nil {
+			report(chunk)
+		}
+	}
 	return s.response, s.err
+}
+
+type sseEvent struct {
+	Name string
+	Data string
+}
+
+func parseSSEEvents(t *testing.T, raw string) []sseEvent {
+	t.Helper()
+
+	chunks := strings.Split(strings.TrimSpace(raw), "\n\n")
+	events := make([]sseEvent, 0, len(chunks))
+	for _, chunk := range chunks {
+		chunk = strings.TrimSpace(chunk)
+		if chunk == "" {
+			continue
+		}
+
+		event := sseEvent{}
+		for _, line := range strings.Split(chunk, "\n") {
+			switch {
+			case strings.HasPrefix(line, "event: "):
+				event.Name = strings.TrimSpace(strings.TrimPrefix(line, "event: "))
+			case strings.HasPrefix(line, "data: "):
+				if event.Data != "" {
+					event.Data += "\n"
+				}
+				event.Data += strings.TrimSpace(strings.TrimPrefix(line, "data: "))
+			}
+		}
+
+		if event.Name == "" {
+			t.Fatalf("stream chunk missing event name: %q", chunk)
+		}
+		if event.Data == "" {
+			t.Fatalf("stream chunk missing data payload: %q", chunk)
+		}
+
+		events = append(events, event)
+	}
+
+	return events
 }
 
 const validGenerateRequestJSON = `{

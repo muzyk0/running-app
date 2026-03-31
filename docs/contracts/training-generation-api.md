@@ -4,7 +4,7 @@ This document is the authoritative MVP contract between the Android client and t
 
 ## Base Principles
 
-- Transport format: JSON over HTTP
+- Transport format: JSON request bodies over HTTP, `text/event-stream` for successful training generation responses, and JSON for non-streaming errors
 - API versioning: path-based for endpoints and `schema_version` inside the training payload
 - Supported locale for MVP generation requests: `ru-RU`
 - Backend remains stateless: it generates and returns one normalized workout per request and does not persist user data
@@ -30,7 +30,7 @@ Generates one workout from a profile snapshot and optional user note.
 Request headers:
 
 - `Content-Type: application/json`
-- `Accept: application/json`
+- `Accept: text/event-stream`
 
 Request body:
 
@@ -74,6 +74,33 @@ Field requirements:
 - `request.user_note`: optional string
 
 Successful response:
+
+Response headers:
+
+- `Content-Type: text/event-stream; charset=utf-8`
+
+The backend streams named server-sent events and closes the connection after the terminal event. `completed` and `error` are mutually exclusive terminal events.
+
+Stream event payloads:
+
+- `log`: realtime generator progress text
+- `completed`: final normalized training payload
+- `error`: terminal generation failure after streaming has started
+
+Example stream:
+
+```text
+event: log
+data: {"message":"Building training prompt"}
+
+event: log
+data: {"message":"Waiting for provider output"}
+
+event: completed
+data: {"schema_version":"mvp.v1","training":{"title":"Базовая интервальная тренировка","summary":"Чередование спокойного бега и ходьбы для безопасного старта тренировки.","goal":"Build consistency","estimated_duration_sec":1020,"disclaimer":"Приложение не является медицинской рекомендацией.","steps":[{"id":"step-1","type":"warmup","duration_sec":300,"voice_prompt":"Пять минут разминки быстрым шагом."},{"id":"step-2","type":"run","duration_sec":120,"voice_prompt":"Две минуты очень легкого бега."},{"id":"step-3","type":"walk","duration_sec":180,"voice_prompt":"Три минуты восстановления шагом."},{"id":"step-4","type":"run","duration_sec":120,"voice_prompt":"Еще две минуты легкого бега."},{"id":"step-5","type":"cooldown","duration_sec":300,"voice_prompt":"Пять минут заминки спокойным шагом."}]}}
+```
+
+The `completed` event payload reuses the existing JSON training envelope:
 
 ```json
 {
@@ -147,6 +174,17 @@ Current error codes:
 - `provider_error`: downstream generation failed
 - `request_timeout`: generation exceeded the configured request timeout
 
+Failure semantics:
+
+- 4xx request validation failures happen before streaming starts and still return ordinary JSON error responses with the HTTP status codes documented above
+- if the backend starts the SSE stream and generation later fails, the HTTP status remains `200 OK` and the terminal `error` event carries the JSON error envelope
+- terminal stream error example:
+
+```text
+event: error
+data: {"error":{"code":"request_timeout","message":"generation timed out"}}
+```
+
 ## Runtime Configuration
 
 Backend runtime settings that affect this contract:
@@ -168,4 +206,4 @@ The same transport contract is used in all supported MVP deployment modes:
 - containerized execution from `backend/Dockerfile`
 - Linux service deployment via `backend/deploy/systemd/running-app-backend.service`
 
-The deployment mode changes process packaging and env injection only. The JSON request and response shapes above stay the same.
+The deployment mode changes process packaging and env injection only. The JSON request shape and the streamed success/error semantics above stay the same.

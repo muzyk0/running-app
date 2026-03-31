@@ -61,6 +61,71 @@ func TestGenerateTrainingBuildsPromptAndNormalizesResponse(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingStreamForwardsProgressAndNormalizesResponse(t *testing.T) {
+	rawOutput := readFixture(t, "happy-path.json")
+	stub := &stubStreamingGenerator{
+		stubGenerator: stubGenerator{
+			response: provider.CompletionResponse{
+				RawOutput: rawOutput,
+			},
+		},
+		progress: []provider.ProgressChunk{
+			{Message: "building prompt"},
+			{Message: "waiting for generator"},
+		},
+	}
+
+	service := NewTrainingService(stub, testLogger())
+
+	var progress []provider.ProgressChunk
+	result, err := service.GenerateTrainingStream(context.Background(), validRequest(), func(chunk provider.ProgressChunk) {
+		progress = append(progress, chunk)
+	})
+	if err != nil {
+		t.Fatalf("GenerateTrainingStream() error = %v", err)
+	}
+
+	if len(progress) != 2 {
+		t.Fatalf("len(progress) = %d, want %d", len(progress), 2)
+	}
+	if progress[0].Message != "building prompt" {
+		t.Fatalf("progress[0].Message = %q, want %q", progress[0].Message, "building prompt")
+	}
+	if progress[1].Message != "waiting for generator" {
+		t.Fatalf("progress[1].Message = %q, want %q", progress[1].Message, "waiting for generator")
+	}
+	if result.SchemaVersion != provider.SchemaVersionMVPv1 {
+		t.Fatalf("SchemaVersion = %q, want %q", result.SchemaVersion, provider.SchemaVersionMVPv1)
+	}
+	if len(result.Training.Steps) == 0 {
+		t.Fatal("Training.Steps = empty, want normalized steps")
+	}
+}
+
+func TestGenerateTrainingStreamFallsBackToGenerateForNonStreamingProvider(t *testing.T) {
+	stub := &stubGenerator{
+		response: provider.CompletionResponse{
+			RawOutput: readFixture(t, "happy-path.json"),
+		},
+	}
+
+	service := NewTrainingService(stub, testLogger())
+
+	result, err := service.GenerateTrainingStream(context.Background(), validRequest(), func(provider.ProgressChunk) {
+		t.Fatal("progress callback should not be called for non-streaming provider")
+	})
+	if err != nil {
+		t.Fatalf("GenerateTrainingStream() error = %v", err)
+	}
+
+	if stub.request.UserPrompt == "" {
+		t.Fatal("provider request was not built for fallback Generate path")
+	}
+	if result.Training.Title == "" {
+		t.Fatal("Training.Title = empty, want normalized training")
+	}
+}
+
 func TestGenerateTrainingRejectsMalformedJSON(t *testing.T) {
 	service := NewTrainingService(
 		&stubGenerator{response: provider.CompletionResponse{RawOutput: readFixture(t, "malformed-json.txt")}},
@@ -171,6 +236,26 @@ func (s *stubGenerator) Name() string {
 
 func (s *stubGenerator) Generate(_ context.Context, request provider.CompletionRequest) (provider.CompletionResponse, error) {
 	s.request = request
+	return s.response, s.err
+}
+
+type stubStreamingGenerator struct {
+	stubGenerator
+	progress []provider.ProgressChunk
+}
+
+func (s *stubStreamingGenerator) GenerateStream(
+	_ context.Context,
+	request provider.CompletionRequest,
+	report provider.ProgressReporter,
+) (provider.CompletionResponse, error) {
+	s.request = request
+	for _, chunk := range s.progress {
+		if report != nil {
+			report(chunk)
+		}
+	}
+
 	return s.response, s.err
 }
 

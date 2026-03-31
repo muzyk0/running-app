@@ -9,6 +9,14 @@ const (
 	DefaultDisclaimer  = "Приложение не является медицинской рекомендацией."
 )
 
+type StreamEventType string
+
+const (
+	StreamEventLog       StreamEventType = "log"
+	StreamEventCompleted StreamEventType = "completed"
+	StreamEventError     StreamEventType = "error"
+)
+
 type AdditionalPromptField struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
@@ -41,6 +49,12 @@ type CompletionResponse struct {
 	RawOutput string
 }
 
+type ProgressChunk struct {
+	Message string `json:"message"`
+}
+
+type ProgressReporter func(ProgressChunk)
+
 type TrainingEnvelope struct {
 	SchemaVersion string   `json:"schema_version"`
 	Training      Training `json:"training"`
@@ -65,6 +79,11 @@ type TrainingStep struct {
 type Generator interface {
 	Name() string
 	Generate(ctx context.Context, request CompletionRequest) (CompletionResponse, error)
+}
+
+type StreamGenerator interface {
+	Generator
+	GenerateStream(ctx context.Context, request CompletionRequest, report ProgressReporter) (CompletionResponse, error)
 }
 
 type StaticGenerator struct{}

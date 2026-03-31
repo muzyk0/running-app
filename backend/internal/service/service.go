@@ -33,6 +33,14 @@ func NewTrainingService(generator provider.Generator, logger *slog.Logger) *Trai
 }
 
 func (s *TrainingService) GenerateTraining(ctx context.Context, request provider.GenerateRequest) (provider.TrainingEnvelope, error) {
+	return s.GenerateTrainingStream(ctx, request, nil)
+}
+
+func (s *TrainingService) GenerateTrainingStream(
+	ctx context.Context,
+	request provider.GenerateRequest,
+	report provider.ProgressReporter,
+) (provider.TrainingEnvelope, error) {
 	if s.provider == nil {
 		return provider.TrainingEnvelope{}, ErrProviderNotConfigured
 	}
@@ -41,7 +49,7 @@ func (s *TrainingService) GenerateTraining(ctx context.Context, request provider
 
 	providerRequest := s.promptBuilder.Build(request)
 
-	rawResponse, err := s.provider.Generate(ctx, providerRequest)
+	rawResponse, err := s.generateProviderResponse(ctx, providerRequest, report)
 	if err != nil {
 		s.logger.Error("training generation failed", "provider", s.provider.Name(), "error", err)
 		return provider.TrainingEnvelope{}, err
@@ -55,4 +63,16 @@ func (s *TrainingService) GenerateTraining(ctx context.Context, request provider
 
 	s.logger.Info("training generation succeeded", "provider", s.provider.Name(), "steps", len(result.Training.Steps))
 	return result, nil
+}
+
+func (s *TrainingService) generateProviderResponse(
+	ctx context.Context,
+	request provider.CompletionRequest,
+	report provider.ProgressReporter,
+) (provider.CompletionResponse, error) {
+	if streamer, ok := s.provider.(provider.StreamGenerator); ok {
+		return streamer.GenerateStream(ctx, request, report)
+	}
+
+	return s.provider.Generate(ctx, request)
 }

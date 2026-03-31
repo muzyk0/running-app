@@ -17,7 +17,11 @@ import (
 const maxRequestBodyBytes = 1 << 20
 
 type trainingService interface {
-	GenerateTraining(ctx context.Context, request provider.GenerateRequest) (provider.TrainingEnvelope, error)
+	GenerateTrainingStream(
+		ctx context.Context,
+		request provider.GenerateRequest,
+		report provider.ProgressReporter,
+	) (provider.TrainingEnvelope, error)
 }
 
 type handler struct {
@@ -109,20 +113,41 @@ func (h *handler) handleGenerateTraining(w http.ResponseWriter, r *http.Request)
 	ctx, cancel := context.WithTimeout(r.Context(), h.requestTimeout)
 	defer cancel()
 
-	response, err := h.service.GenerateTraining(ctx, generateRequest)
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming_unsupported", "response writer does not support streaming")
+		return
+	}
+
+	startEventStream(w)
+	flusher.Flush()
+
+	var streamWriteErr error
+	response, err := h.service.GenerateTrainingStream(ctx, generateRequest, func(chunk provider.ProgressChunk) {
+		if streamWriteErr != nil {
+			return
+		}
+		if err := writeSSEEvent(w, flusher, provider.StreamEventLog, chunk); err != nil {
+			streamWriteErr = err
+		}
+	})
 	if err != nil {
-		switch {
-		case errors.Is(err, context.DeadlineExceeded):
-			writeError(w, http.StatusGatewayTimeout, "request_timeout", "generation timed out")
-		case errors.Is(err, service.ErrProviderNotConfigured):
-			writeError(w, http.StatusServiceUnavailable, "service_unavailable", "training provider is not configured")
-		default:
-			writeError(w, http.StatusBadGateway, "provider_error", "training generation failed")
+		if writeErr := writeSSEEvent(w, flusher, provider.StreamEventError, errorEnvelope{
+			Error: mapGenerationError(err),
+		}); writeErr != nil {
+			h.logger.Error("write stream error event failed", "error", writeErr)
 		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	if streamWriteErr != nil {
+		h.logger.Error("write stream log event failed", "error", streamWriteErr)
+		return
+	}
+
+	if err := writeSSEEvent(w, flusher, provider.StreamEventCompleted, response); err != nil {
+		h.logger.Error("write stream completed event failed", "error", err)
+	}
 }
 
 func (r generateTrainingRequest) toProviderRequest() (provider.GenerateRequest, error) {
@@ -220,6 +245,42 @@ func writeError(w http.ResponseWriter, status int, code string, message string) 
 	})
 }
 
+func mapGenerationError(err error) apiError {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return apiError{Code: "request_timeout", Message: "generation timed out"}
+	case errors.Is(err, service.ErrProviderNotConfigured):
+		return apiError{Code: "service_unavailable", Message: "training provider is not configured"}
+	default:
+		return apiError{Code: "provider_error", Message: "training generation failed"}
+	}
+}
+
+func startEventStream(w http.ResponseWriter) {
+	headers := w.Header()
+	headers.Set("Content-Type", "text/event-stream; charset=utf-8")
+	headers.Set("Cache-Control", "no-cache")
+	headers.Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+}
+
+func writeSSEEvent(w io.Writer, flusher http.Flusher, eventType provider.StreamEventType, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.WriteString(w, "event: "+string(eventType)+"\n"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, "data: "+string(data)+"\n\n"); err != nil {
+		return err
+	}
+
+	flusher.Flush()
+	return nil
+}
+
 func (h *handler) withRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startedAt := time.Now()
@@ -245,4 +306,13 @@ type statusRecorder struct {
 func (r *statusRecorder) WriteHeader(statusCode int) {
 	r.statusCode = statusCode
 	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (r *statusRecorder) Flush() {
+	flusher, ok := r.ResponseWriter.(http.Flusher)
+	if !ok {
+		return
+	}
+
+	flusher.Flush()
 }
