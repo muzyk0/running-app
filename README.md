@@ -160,6 +160,7 @@ The published container image defaults to the `static` provider because it does 
 
 Systemd service:
 
+- Full VPS walkthrough: `backend/deploy/README.md`
 - Use `backend/deploy/systemd/running-app-backend.service`
 - Supply environment variables through `/etc/running-app/backend.env`
 - Install the built binary as `/usr/local/bin/running-app-backend`
