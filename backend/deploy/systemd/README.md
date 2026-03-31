@@ -29,7 +29,22 @@ sudo ./backend/deploy/systemd/install-debian.sh
 From the repo root:
 
 ```bash
+make backend-build
 sudo ./backend/deploy/systemd/install-debian.sh
+```
+
+The installer prefers a prebuilt binary from:
+
+```bash
+backend/bin/running-app-backend
+```
+
+If that file is missing, the installer falls back to building on the server.
+
+If Go is installed outside root's default `PATH`, pass it explicitly for the fallback build path:
+
+```bash
+sudo RUNNING_APP_GO_BINARY="$(command -v go)" ./backend/deploy/systemd/install-debian.sh
 ```
 
 ## Post-install checks

@@ -55,6 +55,7 @@ find_go_bin() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
+PREBUILT_BINARY_DEFAULT="$BACKEND_DIR/bin/running-app-backend"
 SERVICE_NAME="running-app-backend"
 SERVICE_USER="running-app"
 SERVICE_GROUP="running-app"
@@ -68,18 +69,13 @@ UNIT_TARGET="/etc/systemd/system/$SERVICE_NAME.service"
 ENV_TEMPLATE="$SCRIPT_DIR/backend.env.example"
 CTL_SOURCE="$SCRIPT_DIR/runningappctl.sh"
 TMP_BINARY="$(mktemp)"
-GO_BIN="$(find_go_bin || true)"
+PREBUILT_BINARY="${RUNNING_APP_BINARY:-$PREBUILT_BINARY_DEFAULT}"
+GO_BIN=""
 
 cleanup() {
   rm -f "$TMP_BINARY"
 }
 trap cleanup EXIT
-
-if [[ -z "$GO_BIN" ]]; then
-  echo "go is required to build the backend binary on the server" >&2
-  echo "tip: rerun with RUNNING_APP_GO_BINARY=/absolute/path/to/go if sudo cannot see your Go installation" >&2
-  exit 1
-fi
 
 if [[ ! -d "$BACKEND_DIR" ]]; then
   echo "backend source directory not found: $BACKEND_DIR" >&2
@@ -117,8 +113,20 @@ fi
 
 install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$APP_ROOT" "$APP_WORKDIR" "$ENV_DIR" "$LOG_DIR"
 
-cd "$BACKEND_DIR"
-"$GO_BIN" build -trimpath -ldflags="-s -w" -o "$TMP_BINARY" ./cmd/server
+if [[ -x "$PREBUILT_BINARY" ]]; then
+  cp "$PREBUILT_BINARY" "$TMP_BINARY"
+else
+  GO_BIN="$(find_go_bin || true)"
+  if [[ -z "$GO_BIN" ]]; then
+    echo "go is required to build the backend binary on the server" >&2
+    echo "tip: run 'make backend-build' first or rerun with RUNNING_APP_GO_BINARY=/absolute/path/to/go" >&2
+    exit 1
+  fi
+
+  cd "$BACKEND_DIR"
+  "$GO_BIN" build -trimpath -ldflags="-s -w" -o "$TMP_BINARY" ./cmd/server
+fi
+
 install -m 0755 "$TMP_BINARY" /usr/local/bin/running-app-backend
 install -m 0755 "$CTL_SOURCE" /usr/local/bin/runningapp
 
