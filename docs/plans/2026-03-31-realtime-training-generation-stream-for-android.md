@@ -42,11 +42,11 @@ Convert training generation from a one-shot JSON response into a streamed reques
 - Modify: `backend/internal/provider/codexcli/provider.go`
 - Modify: `backend/internal/provider/codexcli/provider_test.go`
 
-- [ ] Extend the generator contract so providers can emit progress chunks during execution
-- [ ] Refactor the Codex CLI provider to read stderr line-by-line in real time, forward those lines into the stream, and still keep `--output-last-message` as the authoritative final JSON for normalization
-- [ ] Give the static provider a minimal deterministic progress sequence so the stream contract stays testable without Codex
-- [ ] Write or update provider tests for streamed stderr forwarding, empty-prompt and error paths, and final output preservation
-- [ ] run `cd backend && go test ./...`
+- [x] Extend the generator contract so providers can emit progress chunks during execution
+- [x] Refactor the Codex CLI provider to read stderr line-by-line in real time, forward those lines into the stream, and still keep `--output-last-message` as the authoritative final JSON for normalization
+- [x] Give the static provider a minimal deterministic progress sequence so the stream contract stays testable without Codex
+- [x] Write or update provider tests for streamed stderr forwarding, empty-prompt and error paths, and final output preservation
+- [x] run `cd backend && go test ./...`
 
 ### Task 3: Replace the Android one-shot result API with streamed generation updates
 

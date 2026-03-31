@@ -88,6 +88,11 @@ type StreamGenerator interface {
 
 type StaticGenerator struct{}
 
+var staticGeneratorProgress = []ProgressChunk{
+	{Message: "loading static training template"},
+	{Message: "returning static training payload"},
+}
+
 func NewStaticGenerator() StaticGenerator {
 	return StaticGenerator{}
 }
@@ -96,11 +101,26 @@ func (StaticGenerator) Name() string {
 	return "static"
 }
 
-func (StaticGenerator) Generate(ctx context.Context, _ CompletionRequest) (CompletionResponse, error) {
+func (g StaticGenerator) Generate(ctx context.Context, request CompletionRequest) (CompletionResponse, error) {
+	return g.GenerateStream(ctx, request, nil)
+}
+
+func (StaticGenerator) GenerateStream(ctx context.Context, _ CompletionRequest, report ProgressReporter) (CompletionResponse, error) {
 	select {
 	case <-ctx.Done():
 		return CompletionResponse{}, ctx.Err()
 	default:
+	}
+
+	if report != nil {
+		for _, chunk := range staticGeneratorProgress {
+			select {
+			case <-ctx.Done():
+				return CompletionResponse{}, ctx.Err()
+			default:
+			}
+			report(chunk)
+		}
 	}
 
 	return CompletionResponse{

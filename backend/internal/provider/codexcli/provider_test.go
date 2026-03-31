@@ -117,7 +117,56 @@ printf '%s\n' '{"training":{"title":"Тест","steps":[{"id":"step-1","type":"r
 	}
 }
 
-func TestGenerateReturnsCommandFailureMessage(t *testing.T) {
+func TestGenerateStreamForwardsStderrAndPreservesFinalOutput(t *testing.T) {
+	scriptPath := writeExecutableScript(t, `#!/bin/sh
+set -eu
+output=""
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "--output-last-message" ]; then
+    output="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+cat >/dev/null
+echo "preparing prompt" >&2
+echo "assembling workout" >&2
+printf '%s\n' '{"training":{"title":"stdout fallback","steps":[]}}'
+printf '%s\n' '{"training":{"title":"file payload","steps":[{"id":"step-1","type":"run","duration_sec":60,"voice_prompt":"Бег."}]}}' > "$output"
+`)
+
+	generator := New(Config{BinaryPath: scriptPath, Sandbox: "workspace-write"})
+
+	var progress []provider.ProgressChunk
+	response, err := generator.GenerateStream(context.Background(), provider.CompletionRequest{
+		SystemPrompt: "Верни JSON",
+		UserPrompt:   "Собери тренировку",
+	}, func(chunk provider.ProgressChunk) {
+		progress = append(progress, chunk)
+	})
+	if err != nil {
+		t.Fatalf("GenerateStream() error = %v", err)
+	}
+
+	if len(progress) != 2 {
+		t.Fatalf("len(progress) = %d, want %d", len(progress), 2)
+	}
+	if progress[0].Message != "preparing prompt" {
+		t.Fatalf("progress[0].Message = %q, want %q", progress[0].Message, "preparing prompt")
+	}
+	if progress[1].Message != "assembling workout" {
+		t.Fatalf("progress[1].Message = %q, want %q", progress[1].Message, "assembling workout")
+	}
+	if !strings.Contains(response.RawOutput, "\"title\":\"file payload\"") {
+		t.Fatalf("RawOutput = %q, want output-file payload", response.RawOutput)
+	}
+	if strings.Contains(response.RawOutput, "stdout fallback") {
+		t.Fatalf("RawOutput = %q, want output file to take precedence over stdout", response.RawOutput)
+	}
+}
+
+func TestGenerateStreamReturnsCommandFailureMessage(t *testing.T) {
 	scriptPath := writeExecutableScript(t, `#!/bin/sh
 set -eu
 echo "codex failed hard" >&2
@@ -125,15 +174,15 @@ exit 7
 `)
 
 	generator := New(Config{BinaryPath: scriptPath})
-	_, err := generator.Generate(context.Background(), provider.CompletionRequest{
+	_, err := generator.GenerateStream(context.Background(), provider.CompletionRequest{
 		SystemPrompt: "Верни JSON",
 		UserPrompt:   "Собери тренировку",
-	})
+	}, nil)
 	if err == nil {
-		t.Fatal("Generate() error = nil, want error")
+		t.Fatal("GenerateStream() error = nil, want error")
 	}
 	if !strings.Contains(err.Error(), "codex failed hard") {
-		t.Fatalf("Generate() error = %v, want stderr message", err)
+		t.Fatalf("GenerateStream() error = %v, want stderr message", err)
 	}
 }
 
@@ -159,12 +208,12 @@ sleep 1
 func TestGenerateRejectsEmptyPrompt(t *testing.T) {
 	generator := New(Config{BinaryPath: "/bin/sh"})
 
-	_, err := generator.Generate(context.Background(), provider.CompletionRequest{})
+	_, err := generator.GenerateStream(context.Background(), provider.CompletionRequest{}, nil)
 	if err == nil {
-		t.Fatal("Generate() error = nil, want error")
+		t.Fatal("GenerateStream() error = nil, want error")
 	}
 	if !strings.Contains(err.Error(), "prompt is empty") {
-		t.Fatalf("Generate() error = %v, want empty prompt error", err)
+		t.Fatalf("GenerateStream() error = %v, want empty prompt error", err)
 	}
 }
 

@@ -1,10 +1,12 @@
 package codexcli
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -58,6 +60,14 @@ func (g *Generator) Name() string {
 }
 
 func (g *Generator) Generate(ctx context.Context, request provider.CompletionRequest) (provider.CompletionResponse, error) {
+	return g.GenerateStream(ctx, request, nil)
+}
+
+func (g *Generator) GenerateStream(
+	ctx context.Context,
+	request provider.CompletionRequest,
+	report provider.ProgressReporter,
+) (provider.CompletionResponse, error) {
 	promptText := combinePrompt(request)
 	if promptText == "" {
 		return provider.CompletionResponse{}, errors.New("prompt is empty")
@@ -80,23 +90,42 @@ func (g *Generator) Generate(ctx context.Context, request provider.CompletionReq
 	cmd.Stdin = strings.NewReader(promptText)
 
 	var stdout bytes.Buffer
-	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return provider.CompletionResponse{}, fmt.Errorf("attach codex stderr: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return provider.CompletionResponse{}, fmt.Errorf("start codex exec: %w", err)
+	}
+
+	stderrDone := make(chan stderrResult, 1)
+	go func() {
+		stderrDone <- streamStderr(ctx, stderrPipe, report)
+	}()
+
+	waitErr := cmd.Wait()
+	stderrResult := <-stderrDone
+
+	if stderrResult.err != nil && ctx.Err() == nil && waitErr == nil {
+		return provider.CompletionResponse{}, stderrResult.err
+	}
+
+	if waitErr != nil {
 		if ctx.Err() != nil {
 			return provider.CompletionResponse{}, ctx.Err()
 		}
 
-		message := strings.TrimSpace(stderr.String())
+		message := strings.TrimSpace(strings.Join(stderrResult.lastLines, "\n"))
 		if message == "" {
 			message = strings.TrimSpace(stdout.String())
 		}
 		if message != "" {
-			return provider.CompletionResponse{}, fmt.Errorf("run codex exec: %w: %s", err, message)
+			return provider.CompletionResponse{}, fmt.Errorf("run codex exec: %w: %s", waitErr, message)
 		}
-		return provider.CompletionResponse{}, fmt.Errorf("run codex exec: %w", err)
+		return provider.CompletionResponse{}, fmt.Errorf("run codex exec: %w", waitErr)
 	}
 
 	rawOutput, err := os.ReadFile(outputPath)
@@ -113,6 +142,73 @@ func (g *Generator) Generate(ctx context.Context, request provider.CompletionReq
 	}
 
 	return provider.CompletionResponse{RawOutput: text}, nil
+}
+
+type stderrResult struct {
+	lastLines []string
+	err       error
+}
+
+func streamStderr(
+	ctx context.Context,
+	reader io.Reader,
+	report provider.ProgressReporter,
+) stderrResult {
+	const maxTailLines = 5
+
+	var tail []string
+
+	err := readLines(ctx, reader, func(line string) {
+		message := strings.TrimSpace(line)
+		if message == "" {
+			return
+		}
+
+		tail = append(tail, message)
+		if len(tail) > maxTailLines {
+			tail = tail[1:]
+		}
+
+		if report != nil {
+			report(provider.ProgressChunk{Message: message})
+		}
+	})
+	if err != nil {
+		return stderrResult{
+			lastLines: tail,
+			err:       fmt.Errorf("read codex stderr: %w", err),
+		}
+	}
+
+	return stderrResult{lastLines: tail}
+}
+
+func readLines(ctx context.Context, reader io.Reader, handler func(string)) error {
+	buffered := bufio.NewReader(reader)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		line, err := buffered.ReadString('\n')
+		if line != "" {
+			handler(trimLineEnding(line))
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+func trimLineEnding(line string) string {
+	line = strings.TrimSuffix(line, "\n")
+	line = strings.TrimSuffix(line, "\r")
+	return line
 }
 
 func (g *Generator) buildArgs(outputPath string) []string {
