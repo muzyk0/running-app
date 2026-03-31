@@ -109,12 +109,12 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/core/datastore/`
 - Create: `android-app/app/src/test/java/<package>/profile/`
 
-- [ ] Implement local profile storage with all mandatory fields plus free-form `additional_prompt_fields`
-- [ ] Store the profile in Room and keep disclaimer acceptance in DataStore as a lightweight app flag
-- [ ] Build first-run onboarding and profile edit screens with required-field validation
-- [ ] Surface the MVP medical disclaimer in a dedicated UX flow without adding hard safety blocking
-- [ ] Add tests for profile validation, Room converters, repository behavior, and disclaimer state
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Implement local profile storage with all mandatory fields plus free-form `additional_prompt_fields`
+- [x] Store the profile in Room and keep disclaimer acceptance in DataStore as a lightweight app flag
+- [x] Build first-run onboarding and profile edit screens with required-field validation
+- [x] Surface the MVP medical disclaimer in a dedicated UX flow without adding hard safety blocking
+- [x] Add tests for profile validation, Room converters, repository behavior, and disclaimer state
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 4: Workout Domain Model, Room Storage, And CRUD UI
 

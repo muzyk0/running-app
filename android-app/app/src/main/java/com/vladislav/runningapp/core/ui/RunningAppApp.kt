@@ -53,7 +53,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.navigation.RunningAppNavHost
 import com.vladislav.runningapp.core.navigation.RunningAppNavigationState
