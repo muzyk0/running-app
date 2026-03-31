@@ -2,15 +2,20 @@ package com.vladislav.runningapp.core.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.vladislav.runningapp.ai.GenerationScreen
+import androidx.navigation.navArgument
+import com.vladislav.runningapp.ai.ui.GenerationScreen
 import com.vladislav.runningapp.activity.ui.FreeRunScreen
 import com.vladislav.runningapp.activity.ui.HistoryScreen
 import com.vladislav.runningapp.profile.ProfileScreen
 import com.vladislav.runningapp.session.ui.ActiveSessionScreen
+import com.vladislav.runningapp.training.ui.FocusedWorkoutIdArg
+import com.vladislav.runningapp.training.ui.TrainingRoutePattern
 import com.vladislav.runningapp.training.ui.TrainingScreen
+import com.vladislav.runningapp.training.ui.trainingRoute
 
 @Composable
 fun RunningAppNavHost(
@@ -26,8 +31,18 @@ fun RunningAppNavHost(
         composable(TopLevelDestination.Profile.route) {
             ProfileScreen()
         }
-        composable(TopLevelDestination.Training.route) {
+        composable(
+            route = TrainingRoutePattern,
+            arguments = listOf(
+                navArgument(FocusedWorkoutIdArg) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) { backStackEntry ->
             TrainingScreen(
+                focusedWorkoutId = backStackEntry.arguments?.getString(FocusedWorkoutIdArg),
                 onOpenActiveSession = {
                     navController.navigate(TopLevelDestination.ActiveSession.route) {
                         launchSingleTop = true
@@ -36,7 +51,26 @@ fun RunningAppNavHost(
             )
         }
         composable(TopLevelDestination.Generation.route) {
-            GenerationScreen()
+            GenerationScreen(
+                onOpenProfile = {
+                    navController.navigate(TopLevelDestination.Profile.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onOpenTraining = { workoutId ->
+                    navController.navigate(trainingRoute(focusedWorkoutId = workoutId)) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
         composable(TopLevelDestination.ActiveSession.route) {
             ActiveSessionScreen(

@@ -19,4 +19,12 @@ class RunningAppNavigationStateTest {
         assertEquals(TopLevelDestination.FreeRun, state.currentTopLevelDestination)
         assertTrue(TopLevelDestination.FreeRun.matches("free-run/live"))
     }
+
+    @Test
+    fun matchesTopLevelDestinationsByRouteQuery() {
+        val state = RunningAppNavigationState(currentRoute = "training?focusedWorkoutId=local-1")
+
+        assertEquals(TopLevelDestination.Training, state.currentTopLevelDestination)
+        assertTrue(TopLevelDestination.Training.matches("training?focusedWorkoutId=local-1"))
+    }
 }

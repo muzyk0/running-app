@@ -211,12 +211,12 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/ai/ui/`
 - Create: `android-app/app/src/test/java/<package>/ai/`
 
-- [ ] Add Retrofit/OkHttp client, DTOs, repository, and use case for `POST /v1/trainings/generate`
-- [ ] Create the generation UI that sends a profile snapshot, handles loading and error states, and previews the generated workout
-- [ ] Save accepted generated workouts into Room and route them into the existing detail, edit, delete, and start flows
-- [ ] Keep backend DTOs isolated from Room and domain models through explicit mappers
-- [ ] Add tests for API client parsing, mapper behavior, repository error handling, and save flow integration
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Add Retrofit/OkHttp client, DTOs, repository, and use case for `POST /v1/trainings/generate`
+- [x] Create the generation UI that sends a profile snapshot, handles loading and error states, and previews the generated workout
+- [x] Save accepted generated workouts into Room and route them into the existing detail, edit, delete, and start flows
+- [x] Keep backend DTOs isolated from Room and domain models through explicit mappers
+- [x] Add tests for API client parsing, mapper behavior, repository error handling, and save flow integration
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 10: Automated Checks, Smoke Validation, Coverage, And Docs
 

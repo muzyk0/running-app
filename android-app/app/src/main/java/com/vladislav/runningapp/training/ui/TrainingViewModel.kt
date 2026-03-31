@@ -66,6 +66,10 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
+    fun onFocusWorkout(workoutId: String) {
+        onSelectWorkout(workoutId)
+    }
+
     fun onCreateWorkout() {
         _uiState.update { state ->
             state.copy(

@@ -9,6 +9,9 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
 }
 
+val trainingApiBaseUrl = providers.gradleProperty("runningAppTrainingApiBaseUrl")
+    .orElse("http://10.0.2.2:8080/")
+
 extensions.configure<ApplicationExtension>("android") {
     namespace = "com.vladislav.runningapp"
     compileSdk = 36
@@ -21,12 +24,14 @@ extensions.configure<ApplicationExtension>("android") {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "TRAINING_API_BASE_URL", "\"${trainingApiBaseUrl.get()}\"")
         vectorDrawables {
             useSupportLibrary = true
         }
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 
@@ -75,9 +80,13 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.google.gson)
     implementation(libs.google.material)
     implementation(libs.google.play.services.location)
     implementation(libs.hilt.android)
+    implementation(libs.squareup.okhttp)
+    implementation(libs.squareup.retrofit)
+    implementation(libs.squareup.retrofit.gson)
     kapt(libs.androidx.room.compiler)
     kapt(libs.hilt.compiler)
 
@@ -87,4 +96,5 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.squareup.okhttp.mockwebserver)
 }

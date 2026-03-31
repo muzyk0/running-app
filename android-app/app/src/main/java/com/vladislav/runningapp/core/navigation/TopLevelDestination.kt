@@ -48,5 +48,7 @@ enum class TopLevelDestination(
     ),
     ;
 
-    fun matches(route: String?): Boolean = route == this.route || route?.startsWith("${this.route}/") == true
+    fun matches(route: String?): Boolean = route == this.route ||
+        route?.startsWith("${this.route}/") == true ||
+        route?.startsWith("${this.route}?") == true
 }
