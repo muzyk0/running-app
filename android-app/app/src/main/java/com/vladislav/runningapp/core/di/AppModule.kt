@@ -42,7 +42,7 @@ object AppModule {
         context,
         AppDatabase::class.java,
         "running-app.db",
-    ).fallbackToDestructiveMigration(dropAllTables = true).build()
+    ).addMigrations(*AppDatabase.ALL_MIGRATIONS).build()
 
     @Provides
     fun provideProfileDao(

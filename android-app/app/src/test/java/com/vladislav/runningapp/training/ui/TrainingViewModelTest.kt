@@ -123,11 +123,49 @@ class TrainingViewModelTest {
         )
     }
 
+    @Test
+    fun confirmDeleteWorkoutRejectsCurrentlyActiveWorkout() = runTest(mainDispatcherRule.dispatcher) {
+        val workout = sampleWorkout()
+        val tracker = FakeActivityTracker()
+        val repository = FakeWorkoutRepository(workouts = listOf(workout))
+        val viewModel = TrainingViewModel(
+            workoutRepository = repository,
+            activityTracker = tracker,
+            trackingPermissionChecker = FixedTrackingPermissionChecker(canStartTrackedSessions = true),
+            defaultDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onRequestDeleteSelectedWorkout()
+        tracker.updateState(
+            ActivityTrackerState(
+                sessionId = "planned-session",
+                type = ActivitySessionType.PlannedWorkout,
+                startedAtEpochMs = 1L,
+                workoutId = workout.id,
+                workoutTitle = workout.title,
+                isTracking = true,
+            ),
+        )
+
+        viewModel.onConfirmDeleteWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(repository.deletedWorkoutIds.isEmpty())
+        assertEquals(
+            "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+            viewModel.uiState.value.errorMessage,
+        )
+        assertEquals(null, viewModel.uiState.value.pendingDeleteWorkoutId)
+        assertEquals(workout.id, viewModel.uiState.value.selectedWorkoutId)
+    }
+
     private class FakeWorkoutRepository(
         workouts: List<Workout> = emptyList(),
         private val saveError: Throwable? = null,
     ) : WorkoutRepository {
         private val state = MutableStateFlow(workouts)
+        val deletedWorkoutIds = mutableListOf<String>()
 
         override fun observeWorkouts(): Flow<List<Workout>> = state
 
@@ -144,6 +182,7 @@ class TrainingViewModelTest {
         }
 
         override suspend fun deleteWorkout(workoutId: String) {
+            deletedWorkoutIds += workoutId
             state.value = state.value.filterNot { workout -> workout.id == workoutId }
         }
     }
@@ -172,6 +211,10 @@ class TrainingViewModelTest {
 
         override fun stopActiveSession() {
             mutableState.value = ActivityTrackerState()
+        }
+
+        fun updateState(state: ActivityTrackerState) {
+            mutableState.value = state
         }
     }
 

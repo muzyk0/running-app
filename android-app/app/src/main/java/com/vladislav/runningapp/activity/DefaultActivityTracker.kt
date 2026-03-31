@@ -139,6 +139,9 @@ class DefaultActivityTracker @Inject constructor(
                     durationSec = durationSec,
                     distanceMeters = currentState.distanceMeters,
                 ),
+                isPaused = status == WorkoutSessionStatus.Paused,
+                needsLocationBaselineReset = currentState.needsLocationBaselineReset ||
+                    (currentState.isPaused && status == WorkoutSessionStatus.Running),
             )
             mutableTrackerState.value = updatedState
             currentState.isTracking && status == WorkoutSessionStatus.Completed
@@ -197,6 +200,8 @@ class DefaultActivityTracker @Inject constructor(
             mutableTrackerState.value = if (retainCompletedState && snapshot.isPlannedWorkout && sessionPersisted) {
                 snapshot.copy(
                     isTracking = false,
+                    isPaused = false,
+                    needsLocationBaselineReset = false,
                     isCompleted = true,
                     isPersisted = sessionPersisted,
                 )
@@ -212,17 +217,27 @@ class DefaultActivityTracker @Inject constructor(
             locationUpdatesClient.locationUpdates().collectLatest { candidatePoint ->
                 mutationMutex.withLock {
                     val currentState = mutableTrackerState.value
-                    if (!currentState.isTracking) {
+                    if (!currentState.isTracking || currentState.isPaused) {
                         return@withLock
                     }
                     val previousPoint = currentState.routePoints.lastOrNull()
-                    if (!ActivityPointFilter.shouldAccept(previousPoint, candidatePoint)) {
+                    val filterReferencePoint = if (currentState.needsLocationBaselineReset) {
+                        null
+                    } else {
+                        previousPoint
+                    }
+                    if (!ActivityPointFilter.shouldAccept(filterReferencePoint, candidatePoint)) {
                         return@withLock
                     }
 
-                    val distanceIncrement = previousPoint?.let { point ->
-                        ActivityDistanceCalculator.distanceMeters(point, candidatePoint)
-                    } ?: 0.0
+                    val distanceIncrement = if (
+                        currentState.needsLocationBaselineReset ||
+                        previousPoint == null
+                    ) {
+                        0.0
+                    } else {
+                        ActivityDistanceCalculator.distanceMeters(previousPoint, candidatePoint)
+                    }
                     val nextDistance = currentState.distanceMeters + distanceIncrement
                     mutableTrackerState.value = currentState.copy(
                         routePoints = currentState.routePoints + candidatePoint,
@@ -231,6 +246,7 @@ class DefaultActivityTracker @Inject constructor(
                             durationSec = currentState.durationSec,
                             distanceMeters = nextDistance,
                         ),
+                        needsLocationBaselineReset = false,
                     )
                 }
             }

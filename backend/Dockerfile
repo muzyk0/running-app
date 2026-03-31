@@ -17,7 +17,8 @@ WORKDIR /app
 
 COPY --from=build /out/running-app-backend /usr/local/bin/running-app-backend
 
-ENV RUNNING_APP_HTTP_ADDR=:8080
+ENV RUNNING_APP_HTTP_ADDR=:8080 \
+    RUNNING_APP_PROVIDER=static
 EXPOSE 8080
 
 USER runningapp

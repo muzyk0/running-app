@@ -131,10 +131,10 @@ Container image:
 cd backend
 docker build -t running-app-backend .
 docker run --rm -p 8080:8080 \
-  -e RUNNING_APP_HTTP_ADDR=:8080 \
-  -e RUNNING_APP_PROVIDER=static \
   running-app-backend
 ```
+
+The published container image defaults to the `static` provider because it does not bundle the Codex CLI binary. To run the `codex` provider in a container, bake the CLI into a custom image and override `RUNNING_APP_PROVIDER=codex`.
 
 Systemd service:
 

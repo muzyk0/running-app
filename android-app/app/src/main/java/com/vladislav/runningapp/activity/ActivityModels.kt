@@ -45,6 +45,8 @@ data class ActivityTrackerState(
     val workoutId: String? = null,
     val workoutTitle: String? = null,
     val isTracking: Boolean = false,
+    val isPaused: Boolean = false,
+    val needsLocationBaselineReset: Boolean = false,
     val isCompleted: Boolean = false,
     val isPersisted: Boolean = false,
 ) {

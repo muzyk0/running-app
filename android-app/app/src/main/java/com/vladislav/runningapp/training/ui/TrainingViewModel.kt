@@ -116,8 +116,20 @@ class TrainingViewModel @Inject constructor(
 
     fun onRequestDeleteSelectedWorkout() {
         val selectedWorkoutId = _uiState.value.selectedWorkoutId ?: return
+        if (isActivePlannedWorkout(selectedWorkoutId)) {
+            _uiState.update { state ->
+                state.copy(
+                    pendingDeleteWorkoutId = null,
+                    errorMessage = "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+                )
+            }
+            return
+        }
         _uiState.update { state ->
-            state.copy(pendingDeleteWorkoutId = selectedWorkoutId)
+            state.copy(
+                pendingDeleteWorkoutId = selectedWorkoutId,
+                errorMessage = null,
+            )
         }
     }
 
@@ -132,6 +144,15 @@ class TrainingViewModel @Inject constructor(
 
     fun onConfirmDeleteWorkout() {
         val workoutId = _uiState.value.pendingDeleteWorkoutId ?: return
+        if (isActivePlannedWorkout(workoutId)) {
+            _uiState.update { state ->
+                state.copy(
+                    pendingDeleteWorkoutId = null,
+                    errorMessage = "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+                )
+            }
+            return
+        }
         viewModelScope.launch(defaultDispatcher) {
             runCatching {
                 workoutRepository.deleteWorkout(workoutId)
@@ -329,5 +350,12 @@ class TrainingViewModel @Inject constructor(
         currentId != null && workouts.any { workout -> workout.id == currentId } -> currentId
         workouts.isNotEmpty() -> workouts.first().id
         else -> null
+    }
+
+    private fun isActivePlannedWorkout(workoutId: String): Boolean {
+        val trackerState = activityTracker.trackerState.value
+        return trackerState.isTracking &&
+            trackerState.isPlannedWorkout &&
+            trackerState.workoutId == workoutId
     }
 }
