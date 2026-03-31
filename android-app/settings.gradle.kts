@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "running-app-android"
+
+include(":app")

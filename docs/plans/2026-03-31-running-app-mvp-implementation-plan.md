@@ -93,12 +93,12 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/core/ui/`
 - Create: `android-app/app/src/main/res/values-ru/strings.xml`
 
-- [ ] Set up a single-module Compose app with Russian-first resources, theme, and root navigation graph
-- [ ] Wire Hilt, app-level dependency graph, and app startup state
-- [ ] Add permission handling for location, notifications, and foreground tracking requirements
-- [ ] Define the top-level destinations for profile, workouts, generation, active session, free run, and history
-- [ ] Add JVM tests for navigation state, permission state reducers, and bootstrap wiring
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Set up a single-module Compose app with Russian-first resources, theme, and root navigation graph
+- [x] Wire Hilt, app-level dependency graph, and app startup state
+- [x] Add permission handling for location, notifications, and foreground tracking requirements
+- [x] Define the top-level destinations for profile, workouts, generation, active session, free run, and history
+- [x] Add JVM tests for navigation state, permission state reducers, and bootstrap wiring
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 3: Profile, Disclaimer, And Local User State
 

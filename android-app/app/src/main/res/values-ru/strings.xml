@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Running App</string>
+    <string name="navigation_open_menu">Открыть разделы</string>
+    <string name="navigation_profile">Профиль</string>
+    <string name="navigation_training">Тренировки</string>
+    <string name="navigation_generation">Генерация</string>
+    <string name="navigation_active_session">Активная сессия</string>
+    <string name="navigation_free_run">Свободный бег</string>
+    <string name="navigation_history">История</string>
+    <string name="startup_loading">Подготавливаем локальный MVP-каркас</string>
+    <string name="startup_caption">Навигация, разрешения и DI уже подключаются.</string>
+    <string name="permissions_title">Готовность к трекингу</string>
+    <string name="permissions_ready">Основные разрешения и системные требования готовы.</string>
+    <string name="permissions_request">Разрешить доступ</string>
+    <string name="permission_status_available">Готово</string>
+    <string name="permission_status_missing">Нужно включить</string>
+    <string name="permission_status_not_required">Не требуется</string>
+    <string name="permission_location">Геолокация</string>
+    <string name="permission_notifications">Уведомления</string>
+    <string name="permission_foreground_tracking">Foreground tracking</string>
+    <string name="permissions_summary_ready">Можно запускать свободный бег и будущие активные тренировки.</string>
+    <string name="permissions_summary_missing">Для GPS-трекинга и активных сессий не хватает системных разрешений.</string>
+    <string name="screen_profile_title">Профиль пользователя</string>
+    <string name="screen_profile_body">Здесь появятся onboarding, дисклеймер и локальное состояние профиля.</string>
+    <string name="screen_training_title">Сохраненные тренировки</string>
+    <string name="screen_training_body">Здесь будет список локально сохраненных тренировок и переход к деталям.</string>
+    <string name="screen_generation_title">AI-генерация</string>
+    <string name="screen_generation_body">Здесь будет запрос тренировки через backend и предпросмотр результата.</string>
+    <string name="screen_active_session_title">Активная тренировка</string>
+    <string name="screen_active_session_body">Здесь будет выполнение сохраненной тренировки с таймером и голосовыми подсказками.</string>
+    <string name="screen_free_run_title">Свободный бег</string>
+    <string name="screen_free_run_body">Здесь будет запуск свободной активности с GPS-маршрутом и метриками.</string>
+    <string name="screen_history_title">История активностей</string>
+    <string name="screen_history_body">Здесь появится журнал завершенных пробежек и тренировок.</string>
+    <string name="shell_badge">MVP shell</string>
+</resources>
