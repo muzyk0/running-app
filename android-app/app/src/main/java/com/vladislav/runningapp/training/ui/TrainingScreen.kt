@@ -39,6 +39,7 @@ import com.vladislav.runningapp.training.domain.WorkoutStepType
 
 @Composable
 fun TrainingScreen(
+    onOpenActiveSession: () -> Unit,
     viewModel: TrainingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,6 +54,10 @@ fun TrainingScreen(
         onDismissDeleteWorkout = viewModel::onDismissDeleteWorkout,
         onConfirmDeleteWorkout = viewModel::onConfirmDeleteWorkout,
         onSaveCopy = viewModel::onSaveCopyOfSelectedWorkout,
+        onStartWorkout = {
+            viewModel.onStartSelectedWorkout()
+            onOpenActiveSession()
+        },
         onTitleChanged = viewModel::onTitleChanged,
         onSummaryChanged = viewModel::onSummaryChanged,
         onGoalChanged = viewModel::onGoalChanged,
@@ -77,6 +82,7 @@ private fun TrainingScreen(
     onDismissDeleteWorkout: () -> Unit,
     onConfirmDeleteWorkout: () -> Unit,
     onSaveCopy: () -> Unit,
+    onStartWorkout: () -> Unit,
     onTitleChanged: (String) -> Unit,
     onSummaryChanged: (String) -> Unit,
     onGoalChanged: (String) -> Unit,
@@ -156,6 +162,7 @@ private fun TrainingScreen(
                     workout = selectedWorkout,
                     onEditWorkout = onEditWorkout,
                     onSaveCopy = onSaveCopy,
+                    onStartWorkout = onStartWorkout,
                     onDeleteWorkout = onRequestDeleteWorkout,
                 )
             }
@@ -296,6 +303,7 @@ private fun WorkoutDetailCard(
     workout: Workout,
     onEditWorkout: () -> Unit,
     onSaveCopy: () -> Unit,
+    onStartWorkout: () -> Unit,
     onDeleteWorkout: () -> Unit,
 ) {
     Card {
@@ -373,18 +381,30 @@ private fun WorkoutDetailCard(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Button(onClick = onEditWorkout) {
-                    Text(text = stringResource(R.string.training_edit_action))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Button(onClick = onStartWorkout) {
+                        Text(text = stringResource(R.string.training_start_action))
+                    }
+                    OutlinedButton(onClick = onEditWorkout) {
+                        Text(text = stringResource(R.string.training_edit_action))
+                    }
                 }
-                OutlinedButton(onClick = onSaveCopy) {
-                    Text(text = stringResource(R.string.training_save_copy_action))
-                }
-                OutlinedButton(onClick = onDeleteWorkout) {
-                    Text(text = stringResource(R.string.training_delete_action))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(onClick = onSaveCopy) {
+                        Text(text = stringResource(R.string.training_save_copy_action))
+                    }
+                    OutlinedButton(onClick = onDeleteWorkout) {
+                        Text(text = stringResource(R.string.training_delete_action))
+                    }
                 }
             }
         }

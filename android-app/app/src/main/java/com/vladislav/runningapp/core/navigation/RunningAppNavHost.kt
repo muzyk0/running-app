@@ -9,7 +9,7 @@ import com.vladislav.runningapp.ai.GenerationScreen
 import com.vladislav.runningapp.activity.FreeRunScreen
 import com.vladislav.runningapp.activity.HistoryScreen
 import com.vladislav.runningapp.profile.ProfileScreen
-import com.vladislav.runningapp.session.ActiveSessionScreen
+import com.vladislav.runningapp.session.ui.ActiveSessionScreen
 import com.vladislav.runningapp.training.ui.TrainingScreen
 
 @Composable
@@ -27,13 +27,26 @@ fun RunningAppNavHost(
             ProfileScreen()
         }
         composable(TopLevelDestination.Training.route) {
-            TrainingScreen()
+            TrainingScreen(
+                onOpenActiveSession = {
+                    navController.navigate(TopLevelDestination.ActiveSession.route) {
+                        launchSingleTop = true
+                    }
+                },
+            )
         }
         composable(TopLevelDestination.Generation.route) {
             GenerationScreen()
         }
         composable(TopLevelDestination.ActiveSession.route) {
-            ActiveSessionScreen()
+            ActiveSessionScreen(
+                onOpenTraining = {
+                    navController.navigate(TopLevelDestination.Training.route) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
         composable(TopLevelDestination.FreeRun.route) {
             FreeRunScreen()

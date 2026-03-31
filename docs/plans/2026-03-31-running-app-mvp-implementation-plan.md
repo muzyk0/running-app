@@ -141,12 +141,12 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/session/ui/`
 - Create: `android-app/app/src/test/java/<package>/session/`
 
-- [ ] Implement a second-based workout execution engine that progresses through saved workout steps
-- [ ] Add active-workout UI with current step, remaining step time, total elapsed time, pause, resume, and stop
-- [ ] Implement audio cues using `TextToSpeech` for `voice_prompt` with a short-tone fallback for failures
-- [ ] Keep execution logic independent from GPS so it can be reused by the tracking layer
-- [ ] Add tests for timer math, step transitions, pause/resume behavior, and audio trigger rules
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Implement a second-based workout execution engine that progresses through saved workout steps
+- [x] Add active-workout UI with current step, remaining step time, total elapsed time, pause, resume, and stop
+- [x] Implement audio cues using `TextToSpeech` for `voice_prompt` with a short-tone fallback for failures
+- [x] Keep execution logic independent from GPS so it can be reused by the tracking layer
+- [x] Add tests for timer math, step transitions, pause/resume behavior, and audio trigger rules
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 6: GPS Tracking, Foreground Session Service, Free Run, And History
 
