@@ -121,7 +121,15 @@
     <string name="generation_generate_action">Сгенерировать тренировку</string>
     <string name="generation_generating_status">Генерируем…</string>
     <string name="generation_error_title">Генерация не удалась</string>
+    <string name="generation_stream_error_title">Поток генерации завершился с ошибкой</string>
     <string name="generation_error_dismiss">Скрыть ошибку</string>
+    <string name="generation_output_title">Живой вывод генерации</string>
+    <string name="generation_output_status_idle">Ожидаем новый запуск</string>
+    <string name="generation_output_status_running">Генерация идет</string>
+    <string name="generation_output_status_completed">Финальная тренировка готова</string>
+    <string name="generation_output_status_failed">Поток остановился с ошибкой</string>
+    <string name="generation_output_waiting">Backend подключен. Ждем первые сообщения от генератора…</string>
+    <string name="generation_output_empty">Пока нет сообщений. Они появятся здесь по мере генерации.</string>
     <string name="generation_preview_title">Предпросмотр сгенерированной тренировки</string>
     <string name="generation_preview_meta">%1$s • %2$d шагов • %3$s</string>
     <string name="generation_save_action">Сохранить и открыть в тренировках</string>

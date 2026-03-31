@@ -23,20 +23,37 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class GenerationPhase {
+    Idle,
+    Streaming,
+    Completed,
+}
+
 data class GenerationUiState(
     val isLoadingProfile: Boolean = true,
     val profile: UserProfile? = null,
     val userNote: String = "",
-    val isGenerating: Boolean = false,
+    val generationPhase: GenerationPhase = GenerationPhase.Idle,
+    val generationOutput: String = "",
+    val streamErrorMessage: String? = null,
     val generatedWorkout: Workout? = null,
     val errorMessage: String? = null,
     val isSaving: Boolean = false,
 ) {
+    val isGenerating: Boolean
+        get() = generationPhase == GenerationPhase.Streaming
+
+    val isWorkoutReady: Boolean
+        get() = generationPhase == GenerationPhase.Completed && generatedWorkout != null
+
     val canGenerate: Boolean
         get() = profile != null && !isLoadingProfile && !isGenerating && !isSaving
 
     val canSaveGeneratedWorkout: Boolean
-        get() = generatedWorkout != null && !isGenerating && !isSaving
+        get() = isWorkoutReady && !isSaving
+
+    val shouldShowGenerationOutput: Boolean
+        get() = isGenerating || generationOutput.isNotBlank() || streamErrorMessage != null || isWorkoutReady
 }
 
 sealed interface GenerationNavigationEvent {
@@ -76,13 +93,17 @@ class GenerationViewModel @Inject constructor(
             state.copy(
                 userNote = value,
                 errorMessage = null,
+                streamErrorMessage = null,
             )
         }
     }
 
     fun onDismissError() {
         _uiState.update { state ->
-            state.copy(errorMessage = null)
+            state.copy(
+                errorMessage = null,
+                streamErrorMessage = null,
+            )
         }
     }
 
@@ -101,7 +122,10 @@ class GenerationViewModel @Inject constructor(
 
         _uiState.update { state ->
             state.copy(
-                isGenerating = true,
+                generationPhase = GenerationPhase.Streaming,
+                generationOutput = "",
+                streamErrorMessage = null,
+                generatedWorkout = null,
                 errorMessage = null,
             )
         }
@@ -109,13 +133,20 @@ class GenerationViewModel @Inject constructor(
         viewModelScope.launch(defaultDispatcher) {
             generateWorkoutUseCase(profile, currentState.userNote).collect { update ->
                 when (update) {
-                    is TrainingGenerationUpdate.Log -> Unit
+                    is TrainingGenerationUpdate.Log -> {
+                        _uiState.update { state ->
+                            state.copy(
+                                generationOutput = state.generationOutput.appendOutputChunk(update.message),
+                            )
+                        }
+                    }
 
                     is TrainingGenerationUpdate.Completed -> {
                         _uiState.update { state ->
                             state.copy(
-                                isGenerating = false,
+                                generationPhase = GenerationPhase.Completed,
                                 generatedWorkout = update.workout,
+                                streamErrorMessage = null,
                                 errorMessage = null,
                             )
                         }
@@ -124,8 +155,8 @@ class GenerationViewModel @Inject constructor(
                     is TrainingGenerationUpdate.Failure -> {
                         _uiState.update { state ->
                             state.copy(
-                                isGenerating = false,
-                                errorMessage = update.error.message,
+                                generationPhase = GenerationPhase.Idle,
+                                streamErrorMessage = update.error.message,
                             )
                         }
                     }
@@ -171,5 +202,17 @@ class GenerationViewModel @Inject constructor(
                 }
             }
         }
+    }
+}
+
+private fun String.appendOutputChunk(chunk: String): String {
+    val normalizedChunk = chunk.trimEnd('\r', '\n')
+    if (normalizedChunk.isBlank()) {
+        return this
+    }
+    return if (isBlank()) {
+        normalizedChunk
+    } else {
+        "$this\n$normalizedChunk"
     }
 }

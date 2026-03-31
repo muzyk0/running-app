@@ -76,11 +76,11 @@ Convert training generation from a one-shot JSON response into a streamed reques
 - Modify: `android-app/app/src/main/res/values-ru/strings.xml`
 - Modify: `android-app/app/src/test/java/com/vladislav/runningapp/ai/ui/GenerationViewModelTest.kt`
 
-- [ ] Add UI state for streamed raw output, terminal stream errors, and the distinction between “generation still running” and “final workout is ready”
-- [ ] Clear previous log and output state when a new request starts, append streamed chunks as they arrive, and keep save actions disabled until the terminal `completed` event delivers a valid workout
-- [ ] Update `GenerationScreen` to show a dedicated realtime output card while generation is active and keep the workout preview hidden until completion
-- [ ] Write or update unit tests for log accumulation, completion transition, error transition, and save-button gating
-- [ ] run `cd android-app && ./gradlew --no-daemon app:testDebugUnitTest`
+- [x] Add UI state for streamed raw output, terminal stream errors, and the distinction between “generation still running” and “final workout is ready”
+- [x] Clear previous log and output state when a new request starts, append streamed chunks as they arrive, and keep save actions disabled until the terminal `completed` event delivers a valid workout
+- [x] Update `GenerationScreen` to show a dedicated realtime output card while generation is active and keep the workout preview hidden until completion
+- [x] Write or update unit tests for log accumulation, completion transition, error transition, and save-button gating
+- [x] run `cd android-app && ./gradlew --no-daemon app:testDebugUnitTest`
 
 ### Task 5: Verify acceptance criteria
 

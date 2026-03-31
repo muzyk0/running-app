@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -106,20 +108,40 @@ private fun GenerationScreen(
             )
         }
 
-        state.errorMessage?.let { message ->
+        if (state.shouldShowGenerationOutput) {
+            GenerationOutputCard(
+                output = state.generationOutput,
+                isGenerating = state.isGenerating,
+                isWorkoutReady = state.isWorkoutReady,
+                hasStreamError = state.streamErrorMessage != null,
+            )
+        }
+
+        state.streamErrorMessage?.let { message ->
             ErrorCard(
+                title = stringResource(R.string.generation_stream_error_title),
                 message = message,
                 onDismiss = onDismissError,
             )
         }
 
-        state.generatedWorkout?.let { workout ->
-            GeneratedWorkoutPreviewCard(
-                workout = workout,
-                isSaving = state.isSaving,
-                canSave = state.canSaveGeneratedWorkout,
-                onAcceptGeneratedWorkout = onAcceptGeneratedWorkout,
+        state.errorMessage?.let { message ->
+            ErrorCard(
+                title = stringResource(R.string.generation_error_title),
+                message = message,
+                onDismiss = onDismissError,
             )
+        }
+
+        if (state.isWorkoutReady) {
+            state.generatedWorkout?.let { workout ->
+                GeneratedWorkoutPreviewCard(
+                    workout = workout,
+                    isSaving = state.isSaving,
+                    canSave = state.canSaveGeneratedWorkout,
+                    onAcceptGeneratedWorkout = onAcceptGeneratedWorkout,
+                )
+            }
         }
     }
 }
@@ -306,6 +328,7 @@ private fun RequestCard(
 
 @Composable
 private fun ErrorCard(
+    title: String,
     message: String,
     onDismiss: () -> Unit,
 ) {
@@ -320,7 +343,7 @@ private fun ErrorCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringResource(R.string.generation_error_title),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
             )
@@ -330,6 +353,60 @@ private fun ErrorCard(
             )
             OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.generation_error_dismiss))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenerationOutputCard(
+    output: String,
+    isGenerating: Boolean,
+    isWorkoutReady: Boolean,
+    hasStreamError: Boolean,
+) {
+    Card {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.generation_output_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = stringResource(
+                    when {
+                        isGenerating -> R.string.generation_output_status_running
+                        isWorkoutReady -> R.string.generation_output_status_completed
+                        hasStreamError -> R.string.generation_output_status_failed
+                        else -> R.string.generation_output_status_idle
+                    },
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (isGenerating) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = stringResource(R.string.generation_output_waiting),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            HorizontalDivider()
+            SelectionContainer {
+                Text(
+                    text = output.ifBlank { stringResource(R.string.generation_output_empty) },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
+                )
             }
         }
     }
