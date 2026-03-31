@@ -16,6 +16,11 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("RUNNING_APP_WRITE_TIMEOUT", "")
 	t.Setenv("RUNNING_APP_IDLE_TIMEOUT", "")
 	t.Setenv("RUNNING_APP_LOG_LEVEL", "")
+	t.Setenv("RUNNING_APP_CODEX_BINARY", "")
+	t.Setenv("RUNNING_APP_CODEX_WORKDIR", "")
+	t.Setenv("RUNNING_APP_CODEX_MODEL", "")
+	t.Setenv("RUNNING_APP_CODEX_PROFILE", "")
+	t.Setenv("RUNNING_APP_CODEX_SANDBOX", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -34,6 +39,12 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Fatalf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelInfo)
 	}
+	if cfg.Codex.BinaryPath != defaultCodexBinaryPath {
+		t.Fatalf("Codex.BinaryPath = %q, want %q", cfg.Codex.BinaryPath, defaultCodexBinaryPath)
+	}
+	if cfg.Codex.Sandbox != defaultCodexSandbox {
+		t.Fatalf("Codex.Sandbox = %q, want %q", cfg.Codex.Sandbox, defaultCodexSandbox)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -46,6 +57,11 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("RUNNING_APP_WRITE_TIMEOUT", "5s")
 	t.Setenv("RUNNING_APP_IDLE_TIMEOUT", "6s")
 	t.Setenv("RUNNING_APP_LOG_LEVEL", "debug")
+	t.Setenv("RUNNING_APP_CODEX_BINARY", "/usr/local/bin/codex")
+	t.Setenv("RUNNING_APP_CODEX_WORKDIR", "/srv/running-app")
+	t.Setenv("RUNNING_APP_CODEX_MODEL", "gpt-5.4")
+	t.Setenv("RUNNING_APP_CODEX_PROFILE", "backend")
+	t.Setenv("RUNNING_APP_CODEX_SANDBOX", "workspace-write")
 
 	cfg, err := Load()
 	if err != nil {
@@ -63,6 +79,21 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.LogLevel != slog.LevelDebug {
 		t.Fatalf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelDebug)
+	}
+	if cfg.Codex.BinaryPath != "/usr/local/bin/codex" {
+		t.Fatalf("Codex.BinaryPath = %q, want %q", cfg.Codex.BinaryPath, "/usr/local/bin/codex")
+	}
+	if cfg.Codex.WorkingDir != "/srv/running-app" {
+		t.Fatalf("Codex.WorkingDir = %q, want %q", cfg.Codex.WorkingDir, "/srv/running-app")
+	}
+	if cfg.Codex.Model != "gpt-5.4" {
+		t.Fatalf("Codex.Model = %q, want %q", cfg.Codex.Model, "gpt-5.4")
+	}
+	if cfg.Codex.Profile != "backend" {
+		t.Fatalf("Codex.Profile = %q, want %q", cfg.Codex.Profile, "backend")
+	}
+	if cfg.Codex.Sandbox != "workspace-write" {
+		t.Fatalf("Codex.Sandbox = %q, want %q", cfg.Codex.Sandbox, "workspace-write")
 	}
 }
 

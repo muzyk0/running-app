@@ -194,13 +194,13 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `docs/contracts/training-schema-v1.md`
 - Create: `backend/testdata/`
 
-- [ ] Implement the provider interface and the first concrete adapter that invokes `codex` CLI with timeout and cancellation
-- [ ] Build prompt assembly from profile snapshot, optional user note, disclaimer guidance, and Russian output requirements
-- [ ] Normalize raw provider output into the canonical `mvp.v1` workout envelope
-- [ ] Validate required fields and reject or repair malformed outputs when it is safe to do so
-- [ ] Keep the provider boundary generic so API-key providers can be added later without changing the mobile contract
-- [ ] Add fixture-based tests for happy path, malformed JSON, missing fields, duplicate step IDs, and provider failures
-- [ ] Run `cd backend && go test ./...`
+- [x] Implement the provider interface and the first concrete adapter that invokes `codex` CLI with timeout and cancellation
+- [x] Build prompt assembly from profile snapshot, optional user note, disclaimer guidance, and Russian output requirements
+- [x] Normalize raw provider output into the canonical `mvp.v1` workout envelope
+- [x] Validate required fields and reject or repair malformed outputs when it is safe to do so
+- [x] Keep the provider boundary generic so API-key providers can be added later without changing the mobile contract
+- [x] Add fixture-based tests for happy path, malformed JSON, missing fields, duplicate step IDs, and provider failures
+- [x] Run `cd backend && go test ./...`
 
 ### Task 9: Android Backend Integration And AI Workout Generation Flow
 

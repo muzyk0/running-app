@@ -10,13 +10,15 @@ import (
 
 const (
 	defaultHTTPAddr          = ":8080"
-	defaultProvider          = "static"
+	defaultProvider          = "codex"
 	defaultRequestTimeout    = 12 * time.Second
 	defaultShutdownTimeout   = 10 * time.Second
 	defaultReadHeaderTimeout = 5 * time.Second
 	defaultReadTimeout       = 15 * time.Second
 	defaultWriteTimeout      = 15 * time.Second
 	defaultIdleTimeout       = 30 * time.Second
+	defaultCodexBinaryPath   = "codex"
+	defaultCodexSandbox      = "read-only"
 )
 
 type Config struct {
@@ -29,6 +31,15 @@ type Config struct {
 	WriteTimeout      time.Duration
 	IdleTimeout       time.Duration
 	LogLevel          slog.Level
+	Codex             CodexConfig
+}
+
+type CodexConfig struct {
+	BinaryPath string
+	WorkingDir string
+	Model      string
+	Profile    string
+	Sandbox    string
 }
 
 func Load() (Config, error) {
@@ -42,6 +53,10 @@ func Load() (Config, error) {
 		WriteTimeout:      defaultWriteTimeout,
 		IdleTimeout:       defaultIdleTimeout,
 		LogLevel:          slog.LevelInfo,
+		Codex: CodexConfig{
+			BinaryPath: defaultCodexBinaryPath,
+			Sandbox:    defaultCodexSandbox,
+		},
 	}
 
 	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_HTTP_ADDR")); value != "" {
@@ -50,6 +65,21 @@ func Load() (Config, error) {
 
 	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_PROVIDER")); value != "" {
 		cfg.Provider = value
+	}
+	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_CODEX_BINARY")); value != "" {
+		cfg.Codex.BinaryPath = value
+	}
+	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_CODEX_WORKDIR")); value != "" {
+		cfg.Codex.WorkingDir = value
+	}
+	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_CODEX_MODEL")); value != "" {
+		cfg.Codex.Model = value
+	}
+	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_CODEX_PROFILE")); value != "" {
+		cfg.Codex.Profile = value
+	}
+	if value := strings.TrimSpace(os.Getenv("RUNNING_APP_CODEX_SANDBOX")); value != "" {
+		cfg.Codex.Sandbox = value
 	}
 
 	if err := loadDuration("RUNNING_APP_REQUEST_TIMEOUT", &cfg.RequestTimeout); err != nil {
@@ -79,6 +109,12 @@ func Load() (Config, error) {
 	}
 	if cfg.Provider == "" {
 		return Config{}, fmt.Errorf("RUNNING_APP_PROVIDER must not be empty")
+	}
+	if cfg.Codex.BinaryPath == "" {
+		return Config{}, fmt.Errorf("RUNNING_APP_CODEX_BINARY must not be empty")
+	}
+	if cfg.Codex.Sandbox == "" {
+		return Config{}, fmt.Errorf("RUNNING_APP_CODEX_SANDBOX must not be empty")
 	}
 
 	return cfg, nil

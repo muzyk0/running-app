@@ -1,0 +1,42 @@
+{
+  "schema_version": "draft-1",
+  "training": {
+    "title": "Базовая интервальная тренировка",
+    "summary": "Чередование спокойного бега и ходьбы для безопасного старта тренировки.",
+    "goal": "Build consistency",
+    "estimated_duration_sec": 999,
+    "disclaimer": "Приложение не является медицинской рекомендацией.",
+    "steps": [
+      {
+        "id": "warm-1",
+        "type": "warmup_walk",
+        "duration_sec": 300,
+        "voice_prompt": "Пять минут разминки быстрым шагом."
+      },
+      {
+        "id": "run-1",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Две минуты очень легкого бега."
+      },
+      {
+        "id": "walk-1",
+        "type": "walk",
+        "duration_sec": 180,
+        "voice_prompt": "Три минуты восстановления шагом."
+      },
+      {
+        "id": "run-2",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Еще две минуты легкого бега."
+      },
+      {
+        "id": "cool-1",
+        "type": "cooldown_walk",
+        "duration_sec": 300,
+        "voice_prompt": "Пять минут заминки спокойным шагом."
+      }
+    ]
+  }
+}

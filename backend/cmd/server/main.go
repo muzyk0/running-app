@@ -12,7 +12,10 @@ import (
 
 	"github.com/muzyk0/running-app/backend/internal/api"
 	"github.com/muzyk0/running-app/backend/internal/config"
+	"github.com/muzyk0/running-app/backend/internal/prompt"
 	"github.com/muzyk0/running-app/backend/internal/provider"
+	"github.com/muzyk0/running-app/backend/internal/provider/codexcli"
+	"github.com/muzyk0/running-app/backend/internal/schema"
 	"github.com/muzyk0/running-app/backend/internal/service"
 )
 
@@ -33,12 +36,17 @@ func run() error {
 		Level: cfg.LogLevel,
 	}))
 
-	generator, err := buildGenerator(cfg.Provider)
+	generator, err := buildGenerator(cfg)
 	if err != nil {
 		return err
 	}
 
-	trainingService := service.NewTrainingService(generator, logger.With("component", "service"))
+	trainingService := service.NewTrainingService(
+		generator,
+		prompt.NewBuilder(),
+		schema.NewNormalizer(),
+		logger.With("component", "service"),
+	)
 	router := api.NewRouter(logger.With("component", "http"), trainingService, cfg.RequestTimeout)
 
 	server := &http.Server{
@@ -84,11 +92,19 @@ func run() error {
 	return nil
 }
 
-func buildGenerator(name string) (provider.Generator, error) {
-	switch name {
+func buildGenerator(cfg config.Config) (provider.Generator, error) {
+	switch cfg.Provider {
 	case "static":
 		return provider.NewStaticGenerator(), nil
+	case "codex":
+		return codexcli.New(codexcli.Config{
+			BinaryPath: cfg.Codex.BinaryPath,
+			WorkingDir: cfg.Codex.WorkingDir,
+			Model:      cfg.Codex.Model,
+			Profile:    cfg.Codex.Profile,
+			Sandbox:    cfg.Codex.Sandbox,
+		}), nil
 	default:
-		return nil, fmt.Errorf("unsupported provider %q", name)
+		return nil, fmt.Errorf("unsupported provider %q", cfg.Provider)
 	}
 }

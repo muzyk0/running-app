@@ -1,0 +1,13 @@
+{
+  "training": {
+    "summary": "Нет обязательного заголовка",
+    "steps": [
+      {
+        "id": "step-1",
+        "type": "run",
+        "duration_sec": 180,
+        "voice_prompt": "Три минуты легкого бега."
+      }
+    ]
+  }
+}

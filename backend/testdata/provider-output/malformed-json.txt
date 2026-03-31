@@ -1,0 +1,13 @@
+{
+  "training": {
+    "title": "Невалидный JSON",
+    "steps": [
+      {
+        "id": "step-1",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Бежим"
+      }
+    ],
+  }
+}
