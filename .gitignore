@@ -1,2 +1,11 @@
 .DS_Store
 .ralphex/
+.idea/
+*.iml
+android-app/.gradle/
+android-app/.kotlin/
+android-app/local.properties
+backend/bin/
+backend/.cache/
+backend/coverage.out
+**/build/

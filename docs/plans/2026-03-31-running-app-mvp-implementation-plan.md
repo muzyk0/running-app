@@ -75,13 +75,13 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/`
 - Create: `backend/`
 
-- [ ] Create the monorepo skeleton with separate Android and backend roots plus shared developer commands
-- [ ] Initialize Gradle and Go toolchains with pinned runtime versions and reproducible local setup
-- [ ] Add root commands for `format`, `lint`, `test`, and backend docker smoke checks
-- [ ] Add bootstrap smoke scripts that validate Gradle sync and Go module resolution
-- [ ] Write tests or smoke checks for bootstrap scripts and toolchain entrypoints
-- [ ] Run `cd android-app && ./gradlew help`
-- [ ] Run `cd backend && go test ./...`
+- [x] Create the monorepo skeleton with separate Android and backend roots plus shared developer commands
+- [x] Initialize Gradle and Go toolchains with pinned runtime versions and reproducible local setup
+- [x] Add root commands for `format`, `lint`, `test`, and backend docker smoke checks
+- [x] Add bootstrap smoke scripts that validate Gradle sync and Go module resolution
+- [x] Write tests or smoke checks for bootstrap scripts and toolchain entrypoints
+- [x] Run `cd android-app && ./gradlew help`
+- [x] Run `cd backend && go test ./...`
 
 ### Task 2: Android App Shell, Navigation, DI, And Permissions
 
