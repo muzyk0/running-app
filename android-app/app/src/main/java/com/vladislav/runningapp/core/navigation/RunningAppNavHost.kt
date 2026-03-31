@@ -10,7 +10,7 @@ import com.vladislav.runningapp.activity.FreeRunScreen
 import com.vladislav.runningapp.activity.HistoryScreen
 import com.vladislav.runningapp.profile.ProfileScreen
 import com.vladislav.runningapp.session.ActiveSessionScreen
-import com.vladislav.runningapp.training.TrainingScreen
+import com.vladislav.runningapp.training.ui.TrainingScreen
 
 @Composable
 fun RunningAppNavHost(

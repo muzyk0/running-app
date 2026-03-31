@@ -125,13 +125,13 @@ Implement a green field monorepo MVP with two deliverables: a native Android app
 - Create: `android-app/app/src/main/java/<package>/training/ui/`
 - Create: `android-app/app/src/test/java/<package>/training/`
 
-- [ ] Define transport, domain, and storage models for the workout envelope with persisted `schemaVersion`
-- [ ] Create Room entities and DAOs for workouts and workout steps
-- [ ] Build workout list, detail, edit, delete, and duplicate-safe save flows
-- [ ] Keep the step model limited to `type`, `duration`, and `voice_prompt` in MVP
-- [ ] Recompute total workout duration from steps inside the domain layer and editor state
-- [ ] Add tests for mappers, DAOs, editor reducers, and duration calculations
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest`
+- [x] Define transport, domain, and storage models for the workout envelope with persisted `schemaVersion`
+- [x] Create Room entities and DAOs for workouts and workout steps
+- [x] Build workout list, detail, edit, delete, and duplicate-safe save flows
+- [x] Keep the step model limited to `type`, `duration`, and `voice_prompt` in MVP
+- [x] Recompute total workout duration from steps inside the domain layer and editor state
+- [x] Add tests for mappers, DAOs, editor reducers, and duration calculations
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest`
 
 ### Task 5: Saved Workout Execution Engine, Timer, And Audio Cues
 

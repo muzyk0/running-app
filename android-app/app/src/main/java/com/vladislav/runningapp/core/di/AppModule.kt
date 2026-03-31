@@ -11,6 +11,7 @@ import com.vladislav.runningapp.core.startup.DefaultStartupDestinationResolver
 import com.vladislav.runningapp.core.startup.StartupDestinationResolver
 import com.vladislav.runningapp.core.storage.AppDatabase
 import com.vladislav.runningapp.core.storage.ProfileDao
+import com.vladislav.runningapp.training.data.local.WorkoutDao
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -51,12 +52,17 @@ object AppModule {
         context,
         AppDatabase::class.java,
         "running-app.db",
-    ).build()
+    ).fallbackToDestructiveMigration(dropAllTables = true).build()
 
     @Provides
     fun provideProfileDao(
         appDatabase: AppDatabase,
     ): ProfileDao = appDatabase.profileDao()
+
+    @Provides
+    fun provideWorkoutDao(
+        appDatabase: AppDatabase,
+    ): WorkoutDao = appDatabase.workoutDao()
 
     @Provides
     @Singleton
