@@ -38,6 +38,19 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+func TestNewRouterUsesDefaultLoggerWhenNil(t *testing.T) {
+	router := NewRouter(nil, &stubTrainingService{}, 2*time.Second)
+
+	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+}
+
 func TestGenerateTrainingSuccessStreamsEvents(t *testing.T) {
 	stub := &stubTrainingService{
 		progress: []provider.ProgressChunk{
@@ -265,6 +278,139 @@ func TestGenerateTrainingRejectsBlankAdditionalPromptFieldValue(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingRequestToProviderRequestValidation(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mutate    func(*generateTrainingRequest)
+		wantError string
+	}{
+		{
+			name: "height must be positive",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.HeightCM = 0
+			},
+			wantError: "profile.height_cm must be greater than zero",
+		},
+		{
+			name: "weight must be positive",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.WeightKG = 0
+			},
+			wantError: "profile.weight_kg must be greater than zero",
+		},
+		{
+			name: "sex is required",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.Sex = "   "
+			},
+			wantError: "profile.sex is required",
+		},
+		{
+			name: "age must be positive",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.Age = 0
+			},
+			wantError: "profile.age must be greater than zero",
+		},
+		{
+			name: "training days must be positive",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.TrainingDaysPerWeek = 0
+			},
+			wantError: "profile.training_days_per_week must be greater than zero",
+		},
+		{
+			name: "fitness level is required",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.FitnessLevel = "   "
+			},
+			wantError: "profile.fitness_level is required",
+		},
+		{
+			name: "injuries are required",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.InjuriesAndLimitations = "   "
+			},
+			wantError: "profile.injuries_and_limitations is required",
+		},
+		{
+			name: "training goal is required",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.TrainingGoal = "   "
+			},
+			wantError: "profile.training_goal is required",
+		},
+		{
+			name: "additional prompt fields require both label and value",
+			mutate: func(request *generateTrainingRequest) {
+				request.Profile.AdditionalPromptFields = []promptFieldRequest{{
+					Label: "   ",
+					Value: "value",
+				}}
+			},
+			wantError: "profile.additional_prompt_fields entries must include non-empty label and value",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			request := validGenerateTrainingRequest(t)
+			testCase.mutate(&request)
+
+			_, err := request.toProviderRequest()
+			if err == nil {
+				t.Fatal("toProviderRequest() error = nil, want error")
+			}
+			if err.Error() != testCase.wantError {
+				t.Fatalf("toProviderRequest() error = %q, want %q", err.Error(), testCase.wantError)
+			}
+		})
+	}
+}
+
+func TestGenerateTrainingRequestToProviderRequestTrimsFields(t *testing.T) {
+	request := validGenerateTrainingRequest(t)
+	request.Profile.Sex = " male "
+	request.Profile.FitnessLevel = " beginner "
+	request.Profile.InjuriesAndLimitations = " none "
+	request.Profile.TrainingGoal = " Build consistency "
+	request.Profile.AdditionalPromptFields = []promptFieldRequest{{
+		Label: " Любимый формат ",
+		Value: " Интервалы ",
+	}}
+	request.Request.UserNote = " Без интенсивных ускорений "
+
+	providerRequest, err := request.toProviderRequest()
+	if err != nil {
+		t.Fatalf("toProviderRequest() error = %v", err)
+	}
+
+	if providerRequest.Profile.Sex != "male" {
+		t.Fatalf("Profile.Sex = %q, want %q", providerRequest.Profile.Sex, "male")
+	}
+	if providerRequest.Profile.FitnessLevel != "beginner" {
+		t.Fatalf("Profile.FitnessLevel = %q, want %q", providerRequest.Profile.FitnessLevel, "beginner")
+	}
+	if providerRequest.Profile.InjuriesAndLimitations != "none" {
+		t.Fatalf("Profile.InjuriesAndLimitations = %q, want %q", providerRequest.Profile.InjuriesAndLimitations, "none")
+	}
+	if providerRequest.Profile.TrainingGoal != "Build consistency" {
+		t.Fatalf("Profile.TrainingGoal = %q, want %q", providerRequest.Profile.TrainingGoal, "Build consistency")
+	}
+	if providerRequest.UserNote != "Без интенсивных ускорений" {
+		t.Fatalf("UserNote = %q, want %q", providerRequest.UserNote, "Без интенсивных ускорений")
+	}
+	if len(providerRequest.Profile.AdditionalPromptFields) != 1 {
+		t.Fatalf("len(Profile.AdditionalPromptFields) = %d, want %d", len(providerRequest.Profile.AdditionalPromptFields), 1)
+	}
+	if providerRequest.Profile.AdditionalPromptFields[0].Label != "Любимый формат" {
+		t.Fatalf("AdditionalPromptFields[0].Label = %q, want %q", providerRequest.Profile.AdditionalPromptFields[0].Label, "Любимый формат")
+	}
+	if providerRequest.Profile.AdditionalPromptFields[0].Value != "Интервалы" {
+		t.Fatalf("AdditionalPromptFields[0].Value = %q, want %q", providerRequest.Profile.AdditionalPromptFields[0].Value, "Интервалы")
+	}
+}
+
 func TestDecodeJSONBodyRejectsUnknownFieldsAndMultipleObjects(t *testing.T) {
 	t.Run("unknown field", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(`{"extra":true}`))
@@ -293,6 +439,53 @@ func TestDecodeJSONBodyRejectsUnknownFieldsAndMultipleObjects(t *testing.T) {
 			t.Fatalf("decodeJSONBody() error = %v, want exact object error", err)
 		}
 	})
+}
+
+func TestHandleGenerateTrainingReturnsStreamingUnsupportedWithoutFlusher(t *testing.T) {
+	h := &handler{
+		logger:         testLogger(),
+		service:        &stubTrainingService{},
+		requestTimeout: 2 * time.Second,
+	}
+	response := newNonFlushingResponseWriter()
+	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
+
+	h.handleGenerateTraining(response, request)
+
+	if response.statusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", response.statusCode, http.StatusInternalServerError)
+	}
+
+	var payload errorEnvelope
+	if err := json.Unmarshal([]byte(response.body.String()), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Error.Code != "streaming_unsupported" {
+		t.Fatalf("error.code = %q, want %q", payload.Error.Code, "streaming_unsupported")
+	}
+}
+
+func TestWriteSSEEventReturnsMarshalError(t *testing.T) {
+	recorder := httptest.NewRecorder()
+
+	err := writeSSEEvent(recorder, recorder, provider.StreamEventLog, map[string]any{
+		"bad": make(chan int),
+	})
+	if err == nil {
+		t.Fatal("writeSSEEvent() error = nil, want error")
+	}
+}
+
+func TestWriteSSEEventReturnsWriterError(t *testing.T) {
+	writer := failingSSEWriter{err: errors.New("write failed")}
+
+	err := writeSSEEvent(writer, writer, provider.StreamEventLog, provider.ProgressChunk{Message: "progress"})
+	if err == nil {
+		t.Fatal("writeSSEEvent() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "write failed") {
+		t.Fatalf("writeSSEEvent() error = %v, want write failure", err)
+	}
 }
 
 func testLogger() *slog.Logger {
@@ -326,6 +519,43 @@ type sseEvent struct {
 	Name string
 	Data string
 }
+
+type nonFlushingResponseWriter struct {
+	header     http.Header
+	body       strings.Builder
+	statusCode int
+}
+
+func newNonFlushingResponseWriter() *nonFlushingResponseWriter {
+	return &nonFlushingResponseWriter{
+		header: make(http.Header),
+	}
+}
+
+func (w *nonFlushingResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *nonFlushingResponseWriter) Write(payload []byte) (int, error) {
+	if w.statusCode == 0 {
+		w.statusCode = http.StatusOK
+	}
+	return w.body.Write(payload)
+}
+
+func (w *nonFlushingResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+type failingSSEWriter struct {
+	err error
+}
+
+func (w failingSSEWriter) Write(_ []byte) (int, error) {
+	return 0, w.err
+}
+
+func (failingSSEWriter) Flush() {}
 
 func parseSSEEvents(t *testing.T, raw string) []sseEvent {
 	t.Helper()
@@ -386,3 +616,14 @@ const validGenerateRequestJSON = `{
     "user_note": "Без интенсивных ускорений"
   }
 }`
+
+func validGenerateTrainingRequest(t *testing.T) generateTrainingRequest {
+	t.Helper()
+
+	var request generateTrainingRequest
+	if err := json.Unmarshal([]byte(validGenerateRequestJSON), &request); err != nil {
+		t.Fatalf("unmarshal valid request: %v", err)
+	}
+
+	return request
+}

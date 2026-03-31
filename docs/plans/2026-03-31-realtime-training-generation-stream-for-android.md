@@ -84,10 +84,10 @@ Convert training generation from a one-shot JSON response into a streamed reques
 
 ### Task 5: Verify acceptance criteria
 
-- [ ] run `./scripts/backend-coverage.sh`
-- [ ] run `./scripts/android-coverage.sh`
-- [ ] run `make lint`
-- [ ] verify test coverage meets 80%+
+- [x] run `./scripts/backend-coverage.sh`
+- [x] run `./scripts/android-coverage.sh`
+- [x] run `make lint`
+- [x] verify test coverage meets 80%+
 
 ### Task 6: Update documentation
 
