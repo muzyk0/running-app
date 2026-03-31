@@ -147,6 +147,13 @@ The `completed` event payload reuses the existing JSON training envelope:
 }
 ```
 
+Android handling expectations:
+
+- append each `log` event `message` to the realtime generation output while the request is still running
+- keep the workout preview and save actions unavailable until a terminal `completed` event arrives
+- treat the terminal `error` event as the same error envelope used by non-success HTTP responses and stop reading the stream after it
+- treat a stream that closes without `completed` or `error` as an invalid backend response
+
 Response guarantees for MVP:
 
 - `schema_version` is always present
@@ -178,6 +185,9 @@ Failure semantics:
 
 - 4xx request validation failures happen before streaming starts and still return ordinary JSON error responses with the HTTP status codes documented above
 - if the backend starts the SSE stream and generation later fails, the HTTP status remains `200 OK` and the terminal `error` event carries the JSON error envelope
+- once the backend emits either `completed` or `error`, it closes the connection and sends no further events
+- terminal stream failures are limited to generation-time backend issues such as `service_unavailable`, `provider_error`, and `request_timeout`; request-shape problems stay on the pre-stream JSON path
+- Android should map non-success HTTP responses and terminal stream `error` events through the same error-code table so validation, provider, and timeout failures stay consistent in the UI
 - terminal stream error example:
 
 ```text

@@ -96,6 +96,6 @@ Convert training generation from a one-shot JSON response into a streamed reques
 - Modify: `docs/contracts/training-generation-api.md`
 - Move: `docs/plans/2026-03-31-realtime-training-generation-stream-for-android.md` to `docs/plans/completed/`
 
-- [ ] Update README sections that describe the training-generation transport so local testing reflects SSE streaming instead of a one-shot JSON success response
-- [ ] Ensure the contract doc includes example stream events and Android/backend failure semantics
-- [ ] move this plan to `docs/plans/completed/`
+- [x] Update README sections that describe the training-generation transport so local testing reflects SSE streaming instead of a one-shot JSON success response
+- [x] Ensure the contract doc includes example stream events and Android/backend failure semantics
+- [x] move this plan to `docs/plans/completed/`

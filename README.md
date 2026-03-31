@@ -3,9 +3,9 @@
 Running App is a monorepo with two MVP deliverables:
 
 - `android-app/`: a native Android client built with Kotlin, Compose, Room, Hilt, and Retrofit
-- `backend/`: a stateless Go HTTP service that generates one normalized workout per request
+- `backend/`: a stateless Go HTTP service that streams generation progress and finishes with one normalized workout envelope
 
-The Android app owns local user data, saved workouts, and session history. The backend only validates, normalizes, and returns workout envelopes.
+The Android app owns local user data, saved workouts, and session history. The backend only validates requests, streams realtime generation progress, and emits the final workout envelope in the terminal `completed` event.
 
 ## Repository Layout
 
@@ -94,6 +94,19 @@ Required and optional backend environment variables:
 - `RUNNING_APP_CODEX_PROFILE`: optional Codex profile name
 - `RUNNING_APP_CODEX_SANDBOX`: Codex sandbox mode, default `read-only`
 
+Training generation success responses now use Server-Sent Events. For manual local checks, keep the connection open and wait for the terminal `completed` or `error` event instead of expecting one JSON success body. Validation failures still return ordinary JSON `4xx` responses before the stream starts.
+
+Example local smoke test:
+
+```bash
+curl -N http://127.0.0.1:8080/v1/trainings/generate \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: text/event-stream' \
+  --data-binary @request.json
+```
+
+Use the same request JSON shape documented in `docs/contracts/training-generation-api.md`. With `RUNNING_APP_PROVIDER=static`, the backend emits deterministic `log` events before the terminal `completed` event, which makes local Android and curl-based smoke tests easier to repeat.
+
 ## Android: Local Run
 
 The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine. Cleartext traffic is allowed only in debug builds; release builds require an HTTPS backend URL.
@@ -116,6 +129,8 @@ export RUNNING_APP_HTTP_ADDR=0.0.0.0:8080
 ./gradlew app:assembleDebug \
   -PrunningAppTrainingApiBaseUrl=http://192.168.1.50:8080/
 ```
+
+The Android generation flow now keeps the successful request open as an SSE stream, appends `log` events to the realtime output card, and only reveals the generated workout after the terminal `completed` event arrives. Non-2xx HTTP responses and terminal stream `error` events both surface as generation failures in the app.
 
 ## Coverage And Validation
 
