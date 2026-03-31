@@ -141,3 +141,13 @@ func TestLoadRejectsInvalidLogLevel(t *testing.T) {
 		t.Fatal("Load() error = nil, want error")
 	}
 }
+
+func TestLoadRejectsWriteTimeoutNotGreaterThanRequestTimeout(t *testing.T) {
+	t.Setenv("RUNNING_APP_REQUEST_TIMEOUT", "45s")
+	t.Setenv("RUNNING_APP_WRITE_TIMEOUT", "45s")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want error")
+	}
+}

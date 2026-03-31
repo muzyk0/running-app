@@ -11,11 +11,11 @@ import (
 const (
 	defaultHTTPAddr          = "127.0.0.1:8080"
 	defaultProvider          = "codex"
-	defaultRequestTimeout    = 12 * time.Second
+	defaultRequestTimeout    = 90 * time.Second
 	defaultShutdownTimeout   = 10 * time.Second
 	defaultReadHeaderTimeout = 5 * time.Second
 	defaultReadTimeout       = 15 * time.Second
-	defaultWriteTimeout      = 15 * time.Second
+	defaultWriteTimeout      = 2 * time.Minute
 	defaultIdleTimeout       = 30 * time.Second
 	defaultCodexBinaryPath   = "codex"
 	defaultCodexSandbox      = "read-only"
@@ -43,6 +43,10 @@ type CodexConfig struct {
 }
 
 func Load() (Config, error) {
+	if err := loadOptionalEnvFile(); err != nil {
+		return Config{}, err
+	}
+
 	cfg := Config{
 		HTTPAddr:          defaultHTTPAddr,
 		Provider:          defaultProvider,
@@ -115,6 +119,9 @@ func Load() (Config, error) {
 	}
 	if cfg.Codex.Sandbox == "" {
 		return Config{}, fmt.Errorf("RUNNING_APP_CODEX_SANDBOX must not be empty")
+	}
+	if cfg.WriteTimeout <= cfg.RequestTimeout {
+		return Config{}, fmt.Errorf("RUNNING_APP_WRITE_TIMEOUT must be greater than RUNNING_APP_REQUEST_TIMEOUT")
 	}
 
 	return cfg, nil

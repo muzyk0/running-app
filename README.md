@@ -55,17 +55,20 @@ export RUNNING_APP_PROVIDER=static
 go run ./cmd/server
 ```
 
+On startup the backend now automatically reads local variables from `backend/.env` when launched from the repo root, or `.env` when launched from the `backend/` directory. Explicit process environment variables still win over file values. Use `RUNNING_APP_ENV_FILE` to point at a custom env file path.
+
 Required and optional backend environment variables:
 
 - `RUNNING_APP_HTTP_ADDR`: listen address, default `127.0.0.1:8080`
 - `RUNNING_APP_PROVIDER`: `codex` or `static`, default `codex`
-- `RUNNING_APP_REQUEST_TIMEOUT`: generation timeout, default `12s`
+- `RUNNING_APP_REQUEST_TIMEOUT`: generation timeout, default `90s`
 - `RUNNING_APP_SHUTDOWN_TIMEOUT`: graceful shutdown timeout, default `10s`
 - `RUNNING_APP_READ_HEADER_TIMEOUT`: default `5s`
 - `RUNNING_APP_READ_TIMEOUT`: default `15s`
-- `RUNNING_APP_WRITE_TIMEOUT`: default `15s`
+- `RUNNING_APP_WRITE_TIMEOUT`: default `2m` and must be greater than `RUNNING_APP_REQUEST_TIMEOUT`
 - `RUNNING_APP_IDLE_TIMEOUT`: default `30s`
 - `RUNNING_APP_LOG_LEVEL`: `DEBUG`, `INFO`, `WARN`, or `ERROR`, default `INFO`
+- `RUNNING_APP_ENV_FILE`: optional explicit path to a dotenv file
 - `RUNNING_APP_CODEX_BINARY`: Codex CLI binary path, default `codex`
 - `RUNNING_APP_CODEX_WORKDIR`: optional working directory passed to `codex exec --cd`
 - `RUNNING_APP_CODEX_MODEL`: optional model override

@@ -18,7 +18,7 @@
     <string name="permission_status_not_required">Не требуется</string>
     <string name="permission_location">Точная геолокация</string>
     <string name="permission_notifications">Уведомления</string>
-    <string name="permission_foreground_tracking">Foreground tracking</string>
+    <string name="permission_foreground_tracking">Фоновый трекинг</string>
     <string name="permissions_summary_ready">Можно запускать свободный бег и будущие активные тренировки.</string>
     <string name="permissions_summary_missing">Для GPS-трекинга и активных сессий нужны системные разрешения, включая точную геолокацию.</string>
     <string name="screen_profile_title">Профиль пользователя</string>

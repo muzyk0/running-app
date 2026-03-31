@@ -35,6 +35,11 @@ abstract class AiModule {
 @Module
 @InstallIn(SingletonComponent::class)
 object AiNetworkModule {
+    private const val TrainingApiConnectTimeoutSec = 15L
+    private const val TrainingApiReadTimeoutSec = 11 * 60L
+    private const val TrainingApiWriteTimeoutSec = 30L
+    private const val TrainingApiCallTimeoutSec = 11 * 60L
+
     @Provides
     @TrainingApiBaseUrl
     fun provideTrainingApiBaseUrl(): String {
@@ -59,9 +64,10 @@ object AiNetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(TrainingApiConnectTimeoutSec, TimeUnit.SECONDS)
+        .readTimeout(TrainingApiReadTimeoutSec, TimeUnit.SECONDS)
+        .writeTimeout(TrainingApiWriteTimeoutSec, TimeUnit.SECONDS)
+        .callTimeout(TrainingApiCallTimeoutSec, TimeUnit.SECONDS)
         .build()
 
     @Provides

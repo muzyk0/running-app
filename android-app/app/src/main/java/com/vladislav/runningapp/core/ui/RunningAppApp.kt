@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -183,14 +184,16 @@ private fun ReadyAppShell(
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                TrackingReadinessCard(
-                    state = permissionsState,
-                    onRequestPermissions = {
-                        permissionsLauncher.launch(
-                            PermissionSnapshotFactory.runtimePermissions(Build.VERSION.SDK_INT).toTypedArray(),
-                        )
-                    },
-                )
+                if (!permissionsState.canStartTrackedSessions) {
+                    TrackingReadinessCard(
+                        state = permissionsState,
+                        onRequestPermissions = {
+                            permissionsLauncher.launch(
+                                PermissionSnapshotFactory.runtimePermissions(Build.VERSION.SDK_INT).toTypedArray(),
+                            )
+                        },
+                    )
+                }
                 RunningAppNavHost(
                     navController = navController,
                     startDestination = startDestination,
@@ -231,9 +234,10 @@ private fun TrackingReadinessCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 StatusChip(
                     label = stringResource(R.string.permission_location),
