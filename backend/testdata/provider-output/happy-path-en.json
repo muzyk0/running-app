@@ -1,0 +1,42 @@
+{
+  "schema_version": "draft-1",
+  "training": {
+    "title": "Base interval workout",
+    "summary": "Alternating easy running and walking for a safe start to the session.",
+    "goal": "Build consistency",
+    "estimated_duration_sec": 999,
+    "disclaimer": "This app does not provide medical advice.",
+    "steps": [
+      {
+        "id": "warm-1",
+        "type": "warmup_walk",
+        "duration_sec": 300,
+        "voice_prompt": "Warm up with brisk walking for 5 minutes."
+      },
+      {
+        "id": "run-1",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Run easily for 2 minutes."
+      },
+      {
+        "id": "walk-1",
+        "type": "walk",
+        "duration_sec": 180,
+        "voice_prompt": "Recover with walking for 3 minutes."
+      },
+      {
+        "id": "run-2",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Run easily again for 2 minutes."
+      },
+      {
+        "id": "cool-1",
+        "type": "cooldown_walk",
+        "duration_sec": 300,
+        "voice_prompt": "Cool down with easy walking for 5 minutes."
+      }
+    ]
+  }
+}

@@ -18,7 +18,7 @@ func TestStaticGeneratorName(t *testing.T) {
 func TestStaticGeneratorGenerateDelegatesToStream(t *testing.T) {
 	generator := NewStaticGenerator()
 
-	response, err := generator.Generate(context.Background(), CompletionRequest{})
+	response, err := generator.Generate(context.Background(), CompletionRequest{Locale: SupportedLocaleRussian})
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -31,7 +31,7 @@ func TestStaticGeneratorGenerateStreamReportsDeterministicProgress(t *testing.T)
 	generator := NewStaticGenerator()
 
 	var progress []ProgressChunk
-	response, err := generator.GenerateStream(context.Background(), CompletionRequest{}, func(chunk ProgressChunk) {
+	response, err := generator.GenerateStream(context.Background(), CompletionRequest{Locale: SupportedLocaleRussian}, func(chunk ProgressChunk) {
 		progress = append(progress, chunk)
 	})
 	if err != nil {
@@ -48,6 +48,26 @@ func TestStaticGeneratorGenerateStreamReportsDeterministicProgress(t *testing.T)
 	}
 	if !strings.Contains(response.RawOutput, "\"title\": \"Базовая интервальная тренировка\"") {
 		t.Fatalf("RawOutput = %q, want static training payload", response.RawOutput)
+	}
+}
+
+func TestStaticGeneratorGenerateStreamUsesEnglishPayload(t *testing.T) {
+	generator := NewStaticGenerator()
+
+	response, err := generator.GenerateStream(context.Background(), CompletionRequest{Locale: SupportedLocaleEnglish}, nil)
+	if err != nil {
+		t.Fatalf("GenerateStream() error = %v", err)
+	}
+
+	requiredParts := []string{
+		"\"title\": \"Base interval workout\"",
+		DefaultDisclaimerEnglish,
+		"\"voice_prompt\": \"Warm up with brisk walking for 5 minutes.\"",
+	}
+	for _, part := range requiredParts {
+		if !strings.Contains(response.RawOutput, part) {
+			t.Fatalf("RawOutput = %q, want english static payload containing %q", response.RawOutput, part)
+		}
 	}
 }
 
@@ -76,5 +96,49 @@ func TestStaticGeneratorGenerateStreamReturnsContextErrorMidProgress(t *testing.
 	}
 	if len(progress) != 1 {
 		t.Fatalf("len(progress) = %d, want %d", len(progress), 1)
+	}
+}
+
+func TestNormalizeSupportedLocaleAndDisclaimer(t *testing.T) {
+	testCases := []struct {
+		name           string
+		input          string
+		wantLocale     string
+		wantOK         bool
+		wantDisclaimer string
+	}{
+		{
+			name:           "russian",
+			input:          SupportedLocaleRussian,
+			wantLocale:     SupportedLocaleRussian,
+			wantOK:         true,
+			wantDisclaimer: DefaultDisclaimer,
+		},
+		{
+			name:           "english",
+			input:          SupportedLocaleEnglish,
+			wantLocale:     SupportedLocaleEnglish,
+			wantOK:         true,
+			wantDisclaimer: DefaultDisclaimerEnglish,
+		},
+		{
+			name:           "unsupported",
+			input:          "fr-FR",
+			wantLocale:     "",
+			wantOK:         false,
+			wantDisclaimer: DefaultDisclaimer,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			locale, ok := NormalizeSupportedLocale(testCase.input)
+			if locale != testCase.wantLocale || ok != testCase.wantOK {
+				t.Fatalf("NormalizeSupportedLocale(%q) = (%q, %t), want (%q, %t)", testCase.input, locale, ok, testCase.wantLocale, testCase.wantOK)
+			}
+			if got := DisclaimerForLocale(testCase.input); got != testCase.wantDisclaimer {
+				t.Fatalf("DisclaimerForLocale(%q) = %q, want %q", testCase.input, got, testCase.wantDisclaimer)
+			}
+		})
 	}
 }

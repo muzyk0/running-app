@@ -61,6 +61,59 @@ func TestGenerateTrainingBuildsPromptAndNormalizesResponse(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingBuildsEnglishPromptAndNormalizesResponse(t *testing.T) {
+	rawOutput := readFixture(t, "happy-path-en.json")
+	stub := &stubGenerator{
+		response: provider.CompletionResponse{
+			RawOutput: rawOutput,
+		},
+	}
+
+	service := NewTrainingService(stub, testLogger())
+	request := validRequestWithLocale(provider.SupportedLocaleEnglish)
+	request.Profile.AdditionalPromptFields = []provider.AdditionalPromptField{
+		{
+			Label: "Surface",
+			Value: "Track or flat pavement",
+		},
+	}
+	request.UserNote = "Avoid hard accelerations"
+
+	result, err := service.GenerateTraining(context.Background(), request)
+	if err != nil {
+		t.Fatalf("GenerateTraining() error = %v", err)
+	}
+
+	if !strings.Contains(stub.request.SystemPrompt, "Return only a JSON object") {
+		t.Fatalf("system prompt = %q, want JSON-only instruction", stub.request.SystemPrompt)
+	}
+	if !strings.Contains(stub.request.SystemPrompt, provider.DisclaimerForLocale(provider.SupportedLocaleEnglish)) {
+		t.Fatalf("system prompt = %q, want english disclaimer guidance", stub.request.SystemPrompt)
+	}
+	if !strings.Contains(stub.request.UserPrompt, "User note: Avoid hard accelerations") {
+		t.Fatalf("user prompt = %q, want english user note", stub.request.UserPrompt)
+	}
+	if !strings.Contains(stub.request.UserPrompt, "Surface: Track or flat pavement") {
+		t.Fatalf("user prompt = %q, want english additional prompt fields", stub.request.UserPrompt)
+	}
+	if !strings.Contains(stub.request.UserPrompt, "Response locale: en-US") {
+		t.Fatalf("user prompt = %q, want english locale", stub.request.UserPrompt)
+	}
+	if stub.request.Locale != provider.SupportedLocaleEnglish {
+		t.Fatalf("request.Locale = %q, want %q", stub.request.Locale, provider.SupportedLocaleEnglish)
+	}
+
+	if result.SchemaVersion != provider.SchemaVersionMVPv1 {
+		t.Fatalf("SchemaVersion = %q, want %q", result.SchemaVersion, provider.SchemaVersionMVPv1)
+	}
+	if result.Training.Title != "Base interval workout" {
+		t.Fatalf("Training.Title = %q, want %q", result.Training.Title, "Base interval workout")
+	}
+	if result.Training.Disclaimer != provider.DisclaimerForLocale(provider.SupportedLocaleEnglish) {
+		t.Fatalf("Disclaimer = %q, want %q", result.Training.Disclaimer, provider.DisclaimerForLocale(provider.SupportedLocaleEnglish))
+	}
+}
+
 func TestGenerateTrainingStreamForwardsProgressAndNormalizesResponse(t *testing.T) {
 	rawOutput := readFixture(t, "happy-path.json")
 	stub := &stubStreamingGenerator{
@@ -272,6 +325,10 @@ func readFixture(t *testing.T, name string) string {
 }
 
 func validRequest() provider.GenerateRequest {
+	return validRequestWithLocale(provider.SupportedLocaleRussian)
+}
+
+func validRequestWithLocale(locale string) provider.GenerateRequest {
 	return provider.GenerateRequest{
 		Profile: provider.ProfileSnapshot{
 			HeightCM:               180,
@@ -289,7 +346,7 @@ func validRequest() provider.GenerateRequest {
 				},
 			},
 		},
-		Locale:   "ru-RU",
+		Locale:   locale,
 		UserNote: "Без интенсивных ускорений",
 	}
 }

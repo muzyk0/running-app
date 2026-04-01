@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 )
 
 const (
@@ -43,6 +44,7 @@ type GenerateRequest struct {
 type CompletionRequest struct {
 	SystemPrompt string
 	UserPrompt   string
+	Locale       string
 }
 
 type CompletionResponse struct {
@@ -105,7 +107,7 @@ func (g StaticGenerator) Generate(ctx context.Context, request CompletionRequest
 	return g.GenerateStream(ctx, request, nil)
 }
 
-func (StaticGenerator) GenerateStream(ctx context.Context, _ CompletionRequest, report ProgressReporter) (CompletionResponse, error) {
+func (StaticGenerator) GenerateStream(ctx context.Context, request CompletionRequest, report ProgressReporter) (CompletionResponse, error) {
 	select {
 	case <-ctx.Done():
 		return CompletionResponse{}, ctx.Err()
@@ -124,14 +126,64 @@ func (StaticGenerator) GenerateStream(ctx context.Context, _ CompletionRequest, 
 	}
 
 	return CompletionResponse{
-		RawOutput: `{
+		RawOutput: staticTrainingOutput(request.Locale),
+	}, nil
+}
+
+func staticTrainingOutput(locale string) string {
+	switch EffectiveLocale(locale) {
+	case SupportedLocaleEnglish:
+		return fmt.Sprintf(`{
+  "schema_version": "mvp.v1",
+  "training": {
+    "title": "Base interval workout",
+    "summary": "Alternating easy running and walking for a safe start to the session.",
+    "goal": "Gradually adapt to running load",
+    "estimated_duration_sec": 1020,
+    "disclaimer": %q,
+    "steps": [
+      {
+        "id": "step-1",
+        "type": "warmup",
+        "duration_sec": 300,
+        "voice_prompt": "Warm up with brisk walking for 5 minutes."
+      },
+      {
+        "id": "step-2",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Run easily for 2 minutes."
+      },
+      {
+        "id": "step-3",
+        "type": "walk",
+        "duration_sec": 180,
+        "voice_prompt": "Recover with walking for 3 minutes."
+      },
+      {
+        "id": "step-4",
+        "type": "run",
+        "duration_sec": 120,
+        "voice_prompt": "Run easily again for 2 minutes."
+      },
+      {
+        "id": "step-5",
+        "type": "cooldown",
+        "duration_sec": 300,
+        "voice_prompt": "Cool down with easy walking for 5 minutes."
+      }
+    ]
+  }
+}`, DisclaimerForLocale(locale))
+	default:
+		return fmt.Sprintf(`{
   "schema_version": "mvp.v1",
   "training": {
     "title": "Базовая интервальная тренировка",
     "summary": "Чередование спокойного бега и ходьбы для безопасного старта тренировки.",
     "goal": "Постепенная адаптация к беговой нагрузке",
     "estimated_duration_sec": 1020,
-    "disclaimer": "Приложение не является медицинской рекомендацией.",
+    "disclaimer": %q,
     "steps": [
       {
         "id": "step-1",
@@ -165,6 +217,6 @@ func (StaticGenerator) GenerateStream(ctx context.Context, _ CompletionRequest, 
       }
     ]
   }
-}`,
-	}, nil
+}`, DisclaimerForLocale(locale))
+	}
 }

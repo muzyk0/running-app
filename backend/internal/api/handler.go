@@ -178,8 +178,9 @@ func (r generateTrainingRequest) toProviderRequest() (provider.GenerateRequest, 
 	if strings.TrimSpace(r.Profile.TrainingGoal) == "" {
 		return provider.GenerateRequest{}, errors.New("profile.training_goal is required")
 	}
-	if strings.TrimSpace(r.Request.Locale) != "ru-RU" {
-		return provider.GenerateRequest{}, errors.New("request.locale must be ru-RU for MVP")
+	locale, ok := provider.NormalizeSupportedLocale(r.Request.Locale)
+	if !ok {
+		return provider.GenerateRequest{}, errors.New("request.locale must be one of ru-RU, en-US")
 	}
 
 	additionalFields := make([]provider.AdditionalPromptField, 0, len(r.Profile.AdditionalPromptFields))
@@ -207,7 +208,7 @@ func (r generateTrainingRequest) toProviderRequest() (provider.GenerateRequest, 
 			TrainingGoal:           strings.TrimSpace(r.Profile.TrainingGoal),
 			AdditionalPromptFields: additionalFields,
 		},
-		Locale:   "ru-RU",
+		Locale:   locale,
 		UserNote: strings.TrimSpace(r.Request.UserNote),
 	}, nil
 }

@@ -13,13 +13,10 @@ import (
 )
 
 type Normalizer struct {
-	defaultDisclaimer string
 }
 
 func NewNormalizer() Normalizer {
-	return Normalizer{
-		defaultDisclaimer: provider.DefaultDisclaimer,
-	}
+	return Normalizer{}
 }
 
 func (n Normalizer) Normalize(rawOutput string, request provider.GenerateRequest) (provider.TrainingEnvelope, error) {
@@ -37,6 +34,7 @@ func (n Normalizer) Normalize(rawOutput string, request provider.GenerateRequest
 }
 
 func (n Normalizer) normalizeEnvelope(decoded map[string]any, request provider.GenerateRequest) (provider.TrainingEnvelope, error) {
+	locale := provider.EffectiveLocale(request.Locale)
 	trainingObject := decoded
 	if rawTraining, ok := decoded["training"]; ok {
 		mapped, ok := rawTraining.(map[string]any)
@@ -61,7 +59,7 @@ func (n Normalizer) normalizeEnvelope(decoded map[string]any, request provider.G
 
 	disclaimer := readOptionalString(trainingObject["disclaimer"])
 	if disclaimer == "" {
-		disclaimer = n.defaultDisclaimer
+		disclaimer = provider.DisclaimerForLocale(locale)
 	}
 
 	rawSteps, ok := trainingObject["steps"].([]any)
@@ -93,7 +91,7 @@ func (n Normalizer) normalizeEnvelope(decoded map[string]any, request provider.G
 
 		voicePrompt := readOptionalString(stepMap["voice_prompt"])
 		if voicePrompt == "" {
-			voicePrompt = defaultVoicePrompt(stepType, durationSec)
+			voicePrompt = defaultVoicePrompt(stepType, durationSec, locale)
 		}
 
 		steps = append(steps, provider.TrainingStep{
@@ -251,20 +249,36 @@ func ensureUniqueStepID(raw string, index int, usedIDs map[string]struct{}) stri
 	}
 }
 
-func defaultVoicePrompt(stepType string, durationSec int) string {
-	duration := formatDurationRussian(durationSec)
-
-	switch stepType {
-	case "warmup":
-		return fmt.Sprintf("%s разминки быстрым шагом.", duration)
-	case "run":
-		return fmt.Sprintf("%s легкого бега.", duration)
-	case "walk":
-		return fmt.Sprintf("%s восстановления шагом.", duration)
-	case "cooldown":
-		return fmt.Sprintf("%s заминки спокойным шагом.", duration)
+func defaultVoicePrompt(stepType string, durationSec int, locale string) string {
+	switch provider.EffectiveLocale(locale) {
+	case provider.SupportedLocaleEnglish:
+		duration := formatDurationEnglish(durationSec)
+		switch stepType {
+		case "warmup":
+			return fmt.Sprintf("Warm up with brisk walking for %s.", duration)
+		case "run":
+			return fmt.Sprintf("Run easily for %s.", duration)
+		case "walk":
+			return fmt.Sprintf("Recover with walking for %s.", duration)
+		case "cooldown":
+			return fmt.Sprintf("Cool down with easy walking for %s.", duration)
+		default:
+			return fmt.Sprintf("Rest and recover for %s.", duration)
+		}
 	default:
-		return fmt.Sprintf("%s отдыха и восстановления.", duration)
+		duration := formatDurationRussian(durationSec)
+		switch stepType {
+		case "warmup":
+			return fmt.Sprintf("%s разминки быстрым шагом.", duration)
+		case "run":
+			return fmt.Sprintf("%s легкого бега.", duration)
+		case "walk":
+			return fmt.Sprintf("%s восстановления шагом.", duration)
+		case "cooldown":
+			return fmt.Sprintf("%s заминки спокойным шагом.", duration)
+		default:
+			return fmt.Sprintf("%s отдыха и восстановления.", duration)
+		}
 	}
 }
 
@@ -281,10 +295,29 @@ func formatDurationRussian(durationSec int) string {
 	}
 
 	if len(parts) == 1 {
-		return capitalizeRussian(parts[0])
+		return capitalizeFirst(parts[0])
 	}
 
-	return capitalizeRussian(strings.Join(parts, " "))
+	return capitalizeFirst(strings.Join(parts, " "))
+}
+
+func formatDurationEnglish(durationSec int) string {
+	minutes := durationSec / 60
+	seconds := durationSec % 60
+
+	parts := make([]string, 0, 2)
+	if minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", minutes, englishPlural(minutes, "minute", "minutes")))
+	}
+	if seconds > 0 || len(parts) == 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", seconds, englishPlural(seconds, "second", "seconds")))
+	}
+
+	if len(parts) == 1 {
+		return capitalizeFirst(parts[0])
+	}
+
+	return capitalizeFirst(strings.Join(parts, " "))
 }
 
 func russianPlural(value int, one string, few string, many string) string {
@@ -303,7 +336,15 @@ func russianPlural(value int, one string, few string, many string) string {
 	}
 }
 
-func capitalizeRussian(value string) string {
+func englishPlural(value int, singular string, plural string) string {
+	if value == 1 {
+		return singular
+	}
+
+	return plural
+}
+
+func capitalizeFirst(value string) string {
 	if value == "" {
 		return ""
 	}

@@ -105,12 +105,12 @@ Replace the current developer-oriented and duplicate Russian copy with real user
 - Modify: `backend/internal/provider/provider_test.go`
 - Modify test fixtures as needed: `backend/testdata/provider-output/`
 
-- [ ] Update request validation so the backend accepts `ru-RU` and `en-US`, preserves the requested locale, and still rejects unsupported locales explicitly
-- [ ] Make prompt instructions locale-aware so provider output is requested in the correct language for user-facing fields and `voice_prompt`
-- [ ] Localize backend-owned fallback text such as disclaimer and synthesized voice prompts so English requests no longer receive Russian defaults
-- [ ] Update static provider output and backend fixtures so local smoke tests and deterministic tests cover both supported locales
-- [ ] Add or update backend tests for accepted locales, unsupported-locale rejection, prompt content, normalized fallback text, and fixture coverage
-- [ ] Run `cd backend && go test ./...` - must pass before task 5
+- [x] Update request validation so the backend accepts `ru-RU` and `en-US`, preserves the requested locale, and still rejects unsupported locales explicitly
+- [x] Make prompt instructions locale-aware so provider output is requested in the correct language for user-facing fields and `voice_prompt`
+- [x] Localize backend-owned fallback text such as disclaimer and synthesized voice prompts so English requests no longer receive Russian defaults
+- [x] Update static provider output and backend fixtures so local smoke tests and deterministic tests cover both supported locales
+- [x] Add or update backend tests for accepted locales, unsupported-locale rejection, prompt content, normalized fallback text, and fixture coverage
+- [x] Run `cd backend && go test ./...` - must pass before task 5
 
 ### Task 5: Verify Acceptance Criteria
 

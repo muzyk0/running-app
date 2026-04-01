@@ -124,9 +124,27 @@ func TestGenerateTrainingSuccessStreamsEvents(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingAcceptsEnglishLocale(t *testing.T) {
+	stub := &stubTrainingService{}
+	router := NewRouter(testLogger(), stub, 2*time.Second)
+	body := strings.Replace(validGenerateRequestJSON, `"locale": "ru-RU"`, `"locale": "en-US"`, 1)
+
+	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(body))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+	if stub.request.Locale != "en-US" {
+		t.Fatalf("locale = %q, want %q", stub.request.Locale, "en-US")
+	}
+}
+
 func TestGenerateTrainingRejectsInvalidLocale(t *testing.T) {
 	router := NewRouter(testLogger(), &stubTrainingService{}, 2*time.Second)
-	body := strings.Replace(validGenerateRequestJSON, `"locale": "ru-RU"`, `"locale": "en-US"`, 1)
+	body := strings.Replace(validGenerateRequestJSON, `"locale": "ru-RU"`, `"locale": "fr-FR"`, 1)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(body))
 	response := httptest.NewRecorder()
@@ -138,6 +156,14 @@ func TestGenerateTrainingRejectsInvalidLocale(t *testing.T) {
 	}
 	if got := response.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want %q", got, "application/json; charset=utf-8")
+	}
+
+	var payload errorEnvelope
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Error.Message != "request.locale must be one of ru-RU, en-US" {
+		t.Fatalf("error.message = %q, want %q", payload.Error.Message, "request.locale must be one of ru-RU, en-US")
 	}
 }
 
@@ -388,6 +414,13 @@ func TestGenerateTrainingRequestToProviderRequestValidation(t *testing.T) {
 			wantError: "profile.training_goal is required",
 		},
 		{
+			name: "locale must be supported",
+			mutate: func(request *generateTrainingRequest) {
+				request.Request.Locale = "fr-FR"
+			},
+			wantError: "request.locale must be one of ru-RU, en-US",
+		},
+		{
 			name: "additional prompt fields require both label and value",
 			mutate: func(request *generateTrainingRequest) {
 				request.Profile.AdditionalPromptFields = []promptFieldRequest{{
@@ -425,6 +458,7 @@ func TestGenerateTrainingRequestToProviderRequestTrimsFields(t *testing.T) {
 		Label: " Любимый формат ",
 		Value: " Интервалы ",
 	}}
+	request.Request.Locale = " en-US "
 	request.Request.UserNote = " Без интенсивных ускорений "
 
 	providerRequest, err := request.toProviderRequest()
@@ -443,6 +477,9 @@ func TestGenerateTrainingRequestToProviderRequestTrimsFields(t *testing.T) {
 	}
 	if providerRequest.Profile.TrainingGoal != "Build consistency" {
 		t.Fatalf("Profile.TrainingGoal = %q, want %q", providerRequest.Profile.TrainingGoal, "Build consistency")
+	}
+	if providerRequest.Locale != "en-US" {
+		t.Fatalf("Locale = %q, want %q", providerRequest.Locale, "en-US")
 	}
 	if providerRequest.UserNote != "Без интенсивных ускорений" {
 		t.Fatalf("UserNote = %q, want %q", providerRequest.UserNote, "Без интенсивных ускорений")
