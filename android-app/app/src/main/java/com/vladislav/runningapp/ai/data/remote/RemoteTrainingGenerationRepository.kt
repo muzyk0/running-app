@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import com.vladislav.runningapp.ai.domain.TrainingGenerationError
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
+import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationRepository
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.profile.UserProfile
@@ -27,10 +28,16 @@ class DefaultTrainingGenerationRepository @Inject constructor(
         profile: UserProfile,
         userNote: String?,
     ): Flow<TrainingGenerationUpdate> = flow {
+        var streamResponseStarted = false
         try {
             val response = apiService.generateTraining(profile.toGenerateTrainingRequestDto(userNote))
             if (!response.isSuccessful) {
-                emit(TrainingGenerationUpdate.Failure(response.toTrainingGenerationError(gson)))
+                emit(
+                    TrainingGenerationUpdate.Failure(
+                        error = response.toTrainingGenerationError(gson),
+                        source = TrainingGenerationFailureSource.Request,
+                    ),
+                )
             } else {
                 val body = response.body()
                 if (body == null) {
@@ -40,9 +47,11 @@ class DefaultTrainingGenerationRepository @Inject constructor(
                                 code = TrainingGenerationErrorCode.InvalidResponse,
                                 message = "Backend вернул пустой поток генерации.",
                             ),
+                            source = TrainingGenerationFailureSource.Stream,
                         ),
                     )
                 } else {
+                    streamResponseStarted = true
                     var terminalEventSeen = false
                     body.use { responseBody ->
                         responseBody.toTrainingGenerationEvents(gson).collect { event ->
@@ -59,6 +68,7 @@ class DefaultTrainingGenerationRepository @Inject constructor(
                                     code = TrainingGenerationErrorCode.InvalidResponse,
                                     message = "Backend завершил поток без terminal event.",
                                 ),
+                                source = TrainingGenerationFailureSource.Stream,
                             ),
                         )
                     }
@@ -67,10 +77,15 @@ class DefaultTrainingGenerationRepository @Inject constructor(
         } catch (_: IOException) {
             emit(
                 TrainingGenerationUpdate.Failure(
-                    TrainingGenerationError(
+                    error = TrainingGenerationError(
                         code = TrainingGenerationErrorCode.Network,
                         message = "Не удалось связаться с backend. Проверьте адрес сервиса и соединение.",
                     ),
+                    source = if (streamResponseStarted) {
+                        TrainingGenerationFailureSource.Stream
+                    } else {
+                        TrainingGenerationFailureSource.Request
+                    },
                 ),
             )
         } catch (error: CancellationException) {
@@ -78,30 +93,37 @@ class DefaultTrainingGenerationRepository @Inject constructor(
         } catch (error: IllegalArgumentException) {
             emit(
                 TrainingGenerationUpdate.Failure(
-                    TrainingGenerationError(
+                    error = TrainingGenerationError(
                         code = TrainingGenerationErrorCode.InvalidResponse,
                         message = error.message?.trim().takeUnless { it.isNullOrEmpty() }
                             ?: "Backend вернул ответ в неподдерживаемом формате.",
                     ),
+                    source = TrainingGenerationFailureSource.Stream,
                 ),
             )
         } catch (error: JsonParseException) {
             emit(
                 TrainingGenerationUpdate.Failure(
-                    TrainingGenerationError(
+                    error = TrainingGenerationError(
                         code = TrainingGenerationErrorCode.InvalidResponse,
                         message = "Backend вернул ответ в неподдерживаемом формате.",
                     ),
+                    source = TrainingGenerationFailureSource.Stream,
                 ),
             )
         } catch (error: Exception) {
             emit(
                 TrainingGenerationUpdate.Failure(
-                    TrainingGenerationError(
+                    error = TrainingGenerationError(
                         code = TrainingGenerationErrorCode.Unknown,
                         message = error.message?.trim().takeUnless { it.isNullOrEmpty() }
                             ?: "Не удалось обработать ответ backend.",
                     ),
+                    source = if (streamResponseStarted) {
+                        TrainingGenerationFailureSource.Stream
+                    } else {
+                        TrainingGenerationFailureSource.Request
+                    },
                 ),
             )
         }

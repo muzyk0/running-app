@@ -95,6 +95,7 @@ Required and optional backend environment variables:
 - `RUNNING_APP_CODEX_SANDBOX`: Codex sandbox mode, default `read-only`
 
 Training generation success responses now use Server-Sent Events. For manual local checks, keep the connection open and wait for the terminal `completed` or `error` event instead of expecting one JSON success body. Validation failures still return ordinary JSON `4xx` responses before the stream starts.
+Treat the request as successful only if the SSE stream is non-empty and ends with `completed`. A `200 OK` response with an empty body, malformed event payloads, or a stream that closes without `completed` or `error` is an invalid backend response.
 
 Example local smoke test:
 
@@ -131,6 +132,7 @@ export RUNNING_APP_HTTP_ADDR=0.0.0.0:8080
 ```
 
 The Android generation flow now keeps the successful request open as an SSE stream, appends `log` events to the realtime output card, and only reveals the generated workout after the terminal `completed` event arrives. Non-2xx HTTP responses and terminal stream `error` events both surface as generation failures in the app.
+If the backend returns `200 OK` but the stream is empty, malformed, or closes before a terminal event, the Android client treats that as an invalid backend response instead of a successful generation.
 
 ## Coverage And Validation
 

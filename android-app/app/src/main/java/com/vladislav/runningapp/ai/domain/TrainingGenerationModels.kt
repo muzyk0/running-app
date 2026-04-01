@@ -17,6 +17,11 @@ data class TrainingGenerationError(
     val message: String,
 )
 
+enum class TrainingGenerationFailureSource {
+    Request,
+    Stream,
+}
+
 sealed interface TrainingGenerationUpdate {
     data class Log(
         val message: String,
@@ -28,5 +33,6 @@ sealed interface TrainingGenerationUpdate {
 
     data class Failure(
         val error: TrainingGenerationError,
+        val source: TrainingGenerationFailureSource = TrainingGenerationFailureSource.Stream,
     ) : TrainingGenerationUpdate
 }

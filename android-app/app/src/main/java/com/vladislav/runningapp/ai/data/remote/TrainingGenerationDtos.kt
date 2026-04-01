@@ -46,19 +46,19 @@ data class GenerateTrainingRequestContextDto(
 
 data class TrainingGenerationLogEventDto(
     @SerializedName("message")
-    val message: String,
+    val message: String? = null,
 )
 
 data class GenerateTrainingResponseDto(
     @SerializedName("schema_version")
-    val schemaVersion: String,
+    val schemaVersion: String? = null,
     @SerializedName("training")
-    val training: RemoteWorkoutDto,
+    val training: RemoteWorkoutDto? = null,
 )
 
 data class RemoteWorkoutDto(
     @SerializedName("title")
-    val title: String,
+    val title: String? = null,
     @SerializedName("summary")
     val summary: String? = null,
     @SerializedName("goal")
@@ -68,18 +68,18 @@ data class RemoteWorkoutDto(
     @SerializedName("disclaimer")
     val disclaimer: String? = null,
     @SerializedName("steps")
-    val steps: List<RemoteWorkoutStepDto>,
+    val steps: List<RemoteWorkoutStepDto>? = null,
 )
 
 data class RemoteWorkoutStepDto(
     @SerializedName("id")
-    val id: String,
+    val id: String? = null,
     @SerializedName("type")
-    val type: String,
+    val type: String? = null,
     @SerializedName("duration_sec")
-    val durationSec: Int,
+    val durationSec: Int? = null,
     @SerializedName("voice_prompt")
-    val voicePrompt: String,
+    val voicePrompt: String? = null,
 )
 
 data class ApiErrorEnvelopeDto(

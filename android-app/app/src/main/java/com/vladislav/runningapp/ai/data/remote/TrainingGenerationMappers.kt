@@ -2,6 +2,7 @@ package com.vladislav.runningapp.ai.data.remote
 
 import com.vladislav.runningapp.ai.domain.TrainingGenerationError
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
+import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
@@ -36,42 +37,67 @@ internal fun UserProfile.toGenerateTrainingRequestDto(
     ),
 )
 
-internal fun GenerateTrainingResponseDto.toWorkoutEnvelopeDto(): WorkoutEnvelopeDto = WorkoutEnvelopeDto(
-    schemaVersion = schemaVersion.trim().ifBlank { DefaultWorkoutSchemaVersion },
-    training = WorkoutDto(
-        title = training.title,
-        summary = training.summary,
-        goal = training.goal,
-        estimatedDurationSec = training.estimatedDurationSec,
-        disclaimer = training.disclaimer,
-        steps = training.steps.map { step ->
-            WorkoutStepDto(
-                id = step.id,
-                type = step.type,
-                durationSec = step.durationSec,
-                voicePrompt = step.voicePrompt,
-            )
-        },
-    ),
-)
+internal fun GenerateTrainingResponseDto.toWorkoutEnvelopeDto(): WorkoutEnvelopeDto {
+    val normalizedSchemaVersion = requireField(schemaVersion, "schema_version")
+    require(normalizedSchemaVersion == DefaultWorkoutSchemaVersion) {
+        "Backend вернул неподдерживаемую версию схемы: $normalizedSchemaVersion."
+    }
+
+    val trainingPayload = requireNotNull(training) {
+        "Backend не прислал training."
+    }
+    val steps = requireNotNull(trainingPayload.steps) {
+        "Backend не прислал training.steps."
+    }
+    require(steps.isNotEmpty()) {
+        "Backend вернул тренировку без шагов."
+    }
+
+    return WorkoutEnvelopeDto(
+        schemaVersion = normalizedSchemaVersion,
+        training = WorkoutDto(
+            title = requireField(trainingPayload.title, "training.title"),
+            summary = trainingPayload.summary,
+            goal = trainingPayload.goal,
+            estimatedDurationSec = trainingPayload.estimatedDurationSec,
+            disclaimer = trainingPayload.disclaimer,
+            steps = steps.mapIndexed { index, step ->
+                WorkoutStepDto(
+                    id = requireField(step.id, "training.steps[$index].id"),
+                    type = requireField(step.type, "training.steps[$index].type"),
+                    durationSec = requirePositiveField(
+                        value = step.durationSec,
+                        fieldName = "training.steps[$index].duration_sec",
+                    ),
+                    voicePrompt = requireField(
+                        value = step.voicePrompt,
+                        fieldName = "training.steps[$index].voice_prompt",
+                    ),
+                )
+            },
+        ),
+    )
+}
 
 internal fun GenerateTrainingResponseDto.toGeneratedWorkout(): Workout =
     toWorkoutEnvelopeDto().toDomainWorkout(workoutId = GeneratedWorkoutPreviewId)
 
 internal fun RemoteTrainingGenerationStreamEventDto.toDomainUpdate(): TrainingGenerationUpdate = when (this) {
     is RemoteTrainingGenerationStreamEventDto.Log ->
-        TrainingGenerationUpdate.Log(message = payload.message)
+        TrainingGenerationUpdate.Log(
+            message = requireField(payload.message, "log.message"),
+        )
 
     is RemoteTrainingGenerationStreamEventDto.Completed -> {
         val workout = payload.toGeneratedWorkout()
-        require(workout.steps.isNotEmpty()) {
-            "Backend вернул тренировку без шагов."
-        }
         TrainingGenerationUpdate.Completed(workout = workout)
     }
 
     is RemoteTrainingGenerationStreamEventDto.Error ->
-        TrainingGenerationUpdate.Failure(error = payload.toTrainingGenerationError())
+        TrainingGenerationUpdate.Failure(
+            error = payload.toTrainingGenerationError(),
+            source = TrainingGenerationFailureSource.Stream,
+        )
 }
 
 internal fun ApiErrorEnvelopeDto?.toTrainingGenerationError(
@@ -113,4 +139,23 @@ internal fun ApiErrorEnvelopeDto?.toTrainingGenerationError(
         code = code,
         message = message,
     )
+}
+
+private fun requireField(
+    value: String?,
+    fieldName: String,
+): String = value?.trim().takeUnless { it.isNullOrEmpty() }
+    ?: throw IllegalArgumentException("Backend не прислал $fieldName.")
+
+private fun requirePositiveField(
+    value: Int?,
+    fieldName: String,
+): Int {
+    requireNotNull(value) {
+        "Backend не прислал $fieldName."
+    }
+    require(value > 0) {
+        "Backend прислал недопустимое значение $fieldName."
+    }
+    return value
 }

@@ -2,6 +2,7 @@ package com.vladislav.runningapp.ai.data.remote
 
 import com.google.gson.Gson
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
+import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
@@ -70,6 +71,7 @@ class RemoteTrainingGenerationRepositoryTest {
         val failure = updates.single() as TrainingGenerationUpdate.Failure
         assertEquals(TrainingGenerationErrorCode.InvalidRequest, failure.error.code)
         assertEquals("profile.training_goal is required", failure.error.message)
+        assertEquals(TrainingGenerationFailureSource.Request, failure.source)
     }
 
     @Test
@@ -90,6 +92,7 @@ class RemoteTrainingGenerationRepositoryTest {
         val failure = updates[1] as TrainingGenerationUpdate.Failure
         assertEquals(TrainingGenerationErrorCode.Timeout, failure.error.code)
         assertEquals("generation timed out", failure.error.message)
+        assertEquals(TrainingGenerationFailureSource.Stream, failure.source)
     }
 
     @Test
@@ -116,6 +119,7 @@ class RemoteTrainingGenerationRepositoryTest {
         val failure = updates[1] as TrainingGenerationUpdate.Failure
         assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
         assertEquals("Backend завершил поток без terminal event.", failure.error.message)
+        assertEquals(TrainingGenerationFailureSource.Stream, failure.source)
     }
 
     @Test
@@ -127,7 +131,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 ): Response<ResponseBody> = Response.success(
                     successfulStreamBody(
                         response = sampleResponse().copy(
-                            training = sampleResponse().training.copy(
+                            training = requireNotNull(sampleResponse().training).copy(
                                 steps = listOf(
                                     RemoteWorkoutStepDto(
                                         id = "step-1",
@@ -150,6 +154,72 @@ class RemoteTrainingGenerationRepositoryTest {
         val failure = updates.last() as TrainingGenerationUpdate.Failure
         assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
         assertTrue(failure.error.message.contains("Unsupported workout step type"))
+        assertEquals(TrainingGenerationFailureSource.Stream, failure.source)
+    }
+
+    @Test
+    fun emitsRequestFailureWhenBackendReturnsMalformedJsonErrorBody() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<ResponseBody> = Response.error(
+                    400,
+                    "{not-json}".toResponseBody("application/json".toMediaType()),
+                )
+            },
+            gson = Gson(),
+        )
+
+        val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
+
+        val failure = updates.single() as TrainingGenerationUpdate.Failure
+        assertEquals(TrainingGenerationErrorCode.InvalidRequest, failure.error.code)
+        assertEquals(TrainingGenerationFailureSource.Request, failure.source)
+    }
+
+    @Test
+    fun emitsStreamFailureWhenSuccessfulResponseBodyIsMissing() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<ResponseBody> = Response.success(null as ResponseBody?)
+            },
+            gson = Gson(),
+        )
+
+        val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
+
+        val failure = updates.single() as TrainingGenerationUpdate.Failure
+        assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
+        assertEquals("Backend вернул пустой поток генерации.", failure.error.message)
+        assertEquals(TrainingGenerationFailureSource.Stream, failure.source)
+    }
+
+    @Test
+    fun emitsStreamFailureWhenCompletedPayloadMissesRequiredFields() = runTest {
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<ResponseBody> = Response.success(
+                    """
+                    event: completed
+                    data: {"training":{"title":"Интервалы","steps":[{"id":"step-1","type":"run","duration_sec":240,"voice_prompt":"Бежим."}]}}
+
+                    """.trimIndent().toResponseBody("text/event-stream".toMediaType()),
+                )
+            },
+            gson = Gson(),
+        )
+
+        val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
+
+        val failure = updates.single() as TrainingGenerationUpdate.Failure
+        assertEquals(TrainingGenerationErrorCode.InvalidResponse, failure.error.code)
+        assertEquals("Backend не прислал schema_version.", failure.error.message)
+        assertEquals(TrainingGenerationFailureSource.Stream, failure.source)
     }
 
     @Test
@@ -168,6 +238,7 @@ class RemoteTrainingGenerationRepositoryTest {
         assertEquals(1, updates.size)
         val failure = updates.single() as TrainingGenerationUpdate.Failure
         assertEquals(TrainingGenerationErrorCode.Network, failure.error.code)
+        assertEquals(TrainingGenerationFailureSource.Request, failure.source)
     }
 
     @Test(expected = CancellationException::class)

@@ -141,6 +141,53 @@ func TestGenerateTrainingRejectsInvalidLocale(t *testing.T) {
 	}
 }
 
+func TestGenerateTrainingRejectsInvalidJSONBeforeStreamStarts(t *testing.T) {
+	testCases := []struct {
+		name    string
+		body    string
+		wantMsg string
+	}{
+		{
+			name:    "unknown field",
+			body:    `{"extra":true}`,
+			wantMsg: "unknown field",
+		},
+		{
+			name:    "multiple objects",
+			body:    `{} {}`,
+			wantMsg: "exactly one JSON object",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			router := NewRouter(testLogger(), &stubTrainingService{}, 2*time.Second)
+			request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(testCase.body))
+			response := httptest.NewRecorder()
+
+			router.ServeHTTP(response, request)
+
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d", response.Code, http.StatusBadRequest)
+			}
+			if got := response.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+				t.Fatalf("Content-Type = %q, want %q", got, "application/json; charset=utf-8")
+			}
+
+			var payload errorEnvelope
+			if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if payload.Error.Code != "invalid_json" {
+				t.Fatalf("error.code = %q, want %q", payload.Error.Code, "invalid_json")
+			}
+			if !strings.Contains(payload.Error.Message, testCase.wantMsg) {
+				t.Fatalf("error.message = %q, want substring %q", payload.Error.Message, testCase.wantMsg)
+			}
+		})
+	}
+}
+
 func TestGenerateTrainingProviderErrorStreamsTerminalErrorEvent(t *testing.T) {
 	router := NewRouter(testLogger(), &stubTrainingService{
 		progress: []provider.ProgressChunk{{Message: "generator started"}},
@@ -465,6 +512,49 @@ func TestHandleGenerateTrainingReturnsStreamingUnsupportedWithoutFlusher(t *test
 	}
 }
 
+func TestNewRouterReturnsStreamingUnsupportedWithoutFlusher(t *testing.T) {
+	router := NewRouter(testLogger(), &stubTrainingService{}, 2*time.Second)
+	response := newNonFlushingResponseWriter()
+	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
+
+	router.ServeHTTP(response, request)
+
+	if response.statusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", response.statusCode, http.StatusInternalServerError)
+	}
+
+	var payload errorEnvelope
+	if err := json.Unmarshal([]byte(response.body.String()), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Error.Code != "streaming_unsupported" {
+		t.Fatalf("error.code = %q, want %q", payload.Error.Code, "streaming_unsupported")
+	}
+}
+
+func TestGenerateTrainingCancelsProviderWhenStreamWriteFails(t *testing.T) {
+	service := &cancelAwareTrainingService{}
+	h := &handler{
+		logger:         testLogger(),
+		service:        service,
+		requestTimeout: 2 * time.Second,
+	}
+	response := newFailingStreamResponseWriter(errors.New("client disconnected"))
+	request := httptest.NewRequest(http.MethodPost, "/v1/trainings/generate", strings.NewReader(validGenerateRequestJSON))
+
+	h.handleGenerateTraining(response, request)
+
+	if response.statusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.statusCode, http.StatusOK)
+	}
+	if !service.sawCancellation {
+		t.Fatal("service context was not canceled after stream write failure")
+	}
+	if response.writeCalls != 1 {
+		t.Fatalf("writeCalls = %d, want %d", response.writeCalls, 1)
+	}
+}
+
 func TestWriteSSEEventReturnsMarshalError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
@@ -515,6 +605,23 @@ func (s *stubTrainingService) GenerateTrainingStream(
 	return s.response, s.err
 }
 
+type cancelAwareTrainingService struct {
+	sawCancellation bool
+}
+
+func (s *cancelAwareTrainingService) GenerateTrainingStream(
+	ctx context.Context,
+	_ provider.GenerateRequest,
+	report provider.ProgressReporter,
+) (provider.TrainingEnvelope, error) {
+	if report != nil {
+		report(provider.ProgressChunk{Message: "building training prompt"})
+	}
+	<-ctx.Done()
+	s.sawCancellation = errors.Is(ctx.Err(), context.Canceled)
+	return provider.TrainingEnvelope{}, ctx.Err()
+}
+
 type sseEvent struct {
 	Name string
 	Data string
@@ -556,6 +663,38 @@ func (w failingSSEWriter) Write(_ []byte) (int, error) {
 }
 
 func (failingSSEWriter) Flush() {}
+
+type failingStreamResponseWriter struct {
+	header     http.Header
+	statusCode int
+	writeCalls int
+	err        error
+}
+
+func newFailingStreamResponseWriter(err error) *failingStreamResponseWriter {
+	return &failingStreamResponseWriter{
+		header: make(http.Header),
+		err:    err,
+	}
+}
+
+func (w *failingStreamResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *failingStreamResponseWriter) Write(_ []byte) (int, error) {
+	w.writeCalls++
+	if w.statusCode == 0 {
+		w.statusCode = http.StatusOK
+	}
+	return 0, w.err
+}
+
+func (w *failingStreamResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+func (w *failingStreamResponseWriter) Flush() {}
 
 func parseSSEEvents(t *testing.T, raw string) []sseEvent {
 	t.Helper()

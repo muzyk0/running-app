@@ -4,7 +4,6 @@ import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.profile.UserSex
-import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -43,7 +42,7 @@ class TrainingGenerationMappersTest {
     @Test
     fun mapsRemoteResponseIntoTransportEnvelope() {
         val response = GenerateTrainingResponseDto(
-            schemaVersion = " ",
+            schemaVersion = "mvp.v1",
             training = RemoteWorkoutDto(
                 title = " Интервалы ",
                 summary = " Легкий старт ",
@@ -63,10 +62,28 @@ class TrainingGenerationMappersTest {
 
         val envelope = response.toWorkoutEnvelopeDto()
 
-        assertEquals(DefaultWorkoutSchemaVersion, envelope.schemaVersion)
-        assertEquals(" Интервалы ", envelope.training.title)
+        assertEquals("mvp.v1", envelope.schemaVersion)
+        assertEquals("Интервалы", envelope.training.title)
         assertEquals(1, envelope.training.steps.size)
         assertEquals("warmup_walk", envelope.training.steps.single().type)
         assertEquals(180, envelope.training.steps.single().durationSec)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsBlankSchemaVersionInCompletedPayload() {
+        GenerateTrainingResponseDto(
+            schemaVersion = " ",
+            training = RemoteWorkoutDto(
+                title = "Интервалы",
+                steps = listOf(
+                    RemoteWorkoutStepDto(
+                        id = "step-1",
+                        type = "run",
+                        durationSec = 180,
+                        voicePrompt = "Бежим.",
+                    ),
+                ),
+            ),
+        ).toWorkoutEnvelopeDto()
     }
 }

@@ -129,19 +129,22 @@ func (h *handler) handleGenerateTraining(w http.ResponseWriter, r *http.Request)
 		}
 		if err := writeSSEEvent(w, flusher, provider.StreamEventLog, chunk); err != nil {
 			streamWriteErr = err
+			cancel()
 		}
 	})
+	if streamWriteErr != nil {
+		h.logger.Error("write stream log event failed", "error", streamWriteErr)
+		return
+	}
 	if err != nil {
+		if errors.Is(err, context.Canceled) && r.Context().Err() != nil {
+			return
+		}
 		if writeErr := writeSSEEvent(w, flusher, provider.StreamEventError, errorEnvelope{
 			Error: mapGenerationError(err),
 		}); writeErr != nil {
 			h.logger.Error("write stream error event failed", "error", writeErr)
 		}
-		return
-	}
-
-	if streamWriteErr != nil {
-		h.logger.Error("write stream log event failed", "error", streamWriteErr)
 		return
 	}
 
@@ -285,8 +288,15 @@ func (h *handler) withRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startedAt := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+		loggedWriter := http.ResponseWriter(recorder)
+		if flusher, ok := w.(http.Flusher); ok {
+			loggedWriter = &flushingStatusRecorder{
+				statusRecorder: recorder,
+				flusher:        flusher,
+			}
+		}
 
-		next.ServeHTTP(recorder, r)
+		next.ServeHTTP(loggedWriter, r)
 
 		h.logger.Info(
 			"http request completed",
@@ -308,11 +318,11 @@ func (r *statusRecorder) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 }
 
-func (r *statusRecorder) Flush() {
-	flusher, ok := r.ResponseWriter.(http.Flusher)
-	if !ok {
-		return
-	}
+type flushingStatusRecorder struct {
+	*statusRecorder
+	flusher http.Flusher
+}
 
-	flusher.Flush()
+func (r *flushingStatusRecorder) Flush() {
+	r.flusher.Flush()
 }

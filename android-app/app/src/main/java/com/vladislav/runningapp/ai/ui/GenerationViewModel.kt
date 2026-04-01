@@ -3,6 +3,7 @@ package com.vladislav.runningapp.ai.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
+import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.core.di.DefaultDispatcher
 import com.vladislav.runningapp.profile.ProfileRepository
@@ -28,6 +29,8 @@ enum class GenerationPhase {
     Streaming,
     Completed,
 }
+
+private const val MaxGenerationOutputChars = 12_000
 
 data class GenerationUiState(
     val isLoadingProfile: Boolean = true,
@@ -154,10 +157,23 @@ class GenerationViewModel @Inject constructor(
 
                     is TrainingGenerationUpdate.Failure -> {
                         _uiState.update { state ->
-                            state.copy(
-                                generationPhase = GenerationPhase.Idle,
-                                streamErrorMessage = update.error.message,
-                            )
+                            when (update.source) {
+                                TrainingGenerationFailureSource.Request ->
+                                    state.copy(
+                                        generationPhase = GenerationPhase.Idle,
+                                        generatedWorkout = null,
+                                        errorMessage = update.error.message,
+                                        streamErrorMessage = null,
+                                    )
+
+                                TrainingGenerationFailureSource.Stream ->
+                                    state.copy(
+                                        generationPhase = GenerationPhase.Idle,
+                                        generatedWorkout = null,
+                                        errorMessage = null,
+                                        streamErrorMessage = update.error.message,
+                                    )
+                            }
                         }
                     }
                 }
@@ -210,9 +226,10 @@ private fun String.appendOutputChunk(chunk: String): String {
     if (normalizedChunk.isBlank()) {
         return this
     }
-    return if (isBlank()) {
+    val combined = if (isBlank()) {
         normalizedChunk
     } else {
         "$this\n$normalizedChunk"
     }
+    return combined.takeLast(MaxGenerationOutputChars).trimStart('\n')
 }

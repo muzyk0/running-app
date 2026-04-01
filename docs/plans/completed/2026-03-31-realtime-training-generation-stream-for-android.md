@@ -98,4 +98,5 @@ Convert training generation from a one-shot JSON response into a streamed reques
 
 - [x] Update README sections that describe the training-generation transport so local testing reflects SSE streaming instead of a one-shot JSON success response
 - [x] Ensure the contract doc includes example stream events and Android/backend failure semantics
+- [x] Document stream success validation and debugging notes in `README.md` and `CLAUDE.md`
 - [x] move this plan to `docs/plans/completed/`

@@ -1,6 +1,9 @@
 package com.vladislav.runningapp.ai.ui
 
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
+import com.vladislav.runningapp.ai.domain.TrainingGenerationError
+import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
+import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationRepository
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
@@ -107,13 +110,19 @@ class GenerationViewModelTest {
 
         secondStream.emit(
             TrainingGenerationUpdate.Failure(
-                error = com.vladislav.runningapp.ai.domain.TrainingGenerationError(
-                    code = com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode.ProviderError,
+                error = TrainingGenerationError(
+                    code = TrainingGenerationErrorCode.ProviderError,
                     message = "provider failed",
                 ),
             ),
         )
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isGenerating)
+        assertEquals("", viewModel.uiState.value.generationOutput)
+        assertNull(viewModel.uiState.value.generatedWorkout)
+        assertEquals("provider failed", viewModel.uiState.value.streamErrorMessage)
+        assertFalse(viewModel.uiState.value.canSaveGeneratedWorkout)
     }
 
     @Test
@@ -130,8 +139,8 @@ class GenerationViewModelTest {
         generationStream.emit(TrainingGenerationUpdate.Log("Building training prompt"))
         generationStream.emit(
             TrainingGenerationUpdate.Failure(
-                error = com.vladislav.runningapp.ai.domain.TrainingGenerationError(
-                    code = com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode.ProviderError,
+                error = TrainingGenerationError(
+                    code = TrainingGenerationErrorCode.ProviderError,
                     message = "provider failed",
                 ),
             ),
@@ -144,6 +153,54 @@ class GenerationViewModelTest {
         assertFalse(viewModel.uiState.value.isWorkoutReady)
         assertNull(viewModel.uiState.value.generatedWorkout)
         assertFalse(viewModel.uiState.value.canSaveGeneratedWorkout)
+    }
+
+    @Test
+    fun routesRequestFailuresToGeneralErrorWithoutShowingStreamOutput() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = createViewModel(
+            repository = SingleShotTrainingGenerationRepository(
+                flowOf(
+                    TrainingGenerationUpdate.Failure(
+                        error = TrainingGenerationError(
+                            code = TrainingGenerationErrorCode.InvalidRequest,
+                            message = "profile.training_goal is required",
+                        ),
+                        source = TrainingGenerationFailureSource.Request,
+                    ),
+                ),
+            ),
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onGenerateWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("profile.training_goal is required", viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.streamErrorMessage)
+        assertFalse(viewModel.uiState.value.shouldShowGenerationOutput)
+        assertFalse(viewModel.uiState.value.isGenerating)
+    }
+
+    @Test
+    fun ignoresGenerateRequestsWhileStreamIsAlreadyRunning() = runTest(mainDispatcherRule.dispatcher) {
+        val generationStream = ControlledGenerationStream()
+        val repository = CountingTrainingGenerationRepository(generationStream.asFlow())
+        val viewModel = createViewModel(repository = repository)
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onGenerateWorkout()
+        viewModel.onGenerateWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, repository.callCount)
+        assertTrue(viewModel.uiState.value.isGenerating)
+
+        generationStream.emit(TrainingGenerationUpdate.Completed(sampleGeneratedWorkout()))
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, repository.callCount)
+        assertTrue(viewModel.uiState.value.isWorkoutReady)
     }
 
     @Test
@@ -292,6 +349,21 @@ class GenerationViewModelTest {
             userNote: String?,
         ): Flow<TrainingGenerationUpdate> = pendingFlows.removeFirstOrNull()
             ?: error("No queued flow configured for generateWorkout")
+    }
+
+    private class CountingTrainingGenerationRepository(
+        private val updates: Flow<TrainingGenerationUpdate>,
+    ) : TrainingGenerationRepository {
+        var callCount: Int = 0
+            private set
+
+        override fun generateWorkout(
+            profile: UserProfile,
+            userNote: String?,
+        ): Flow<TrainingGenerationUpdate> {
+            callCount += 1
+            return updates
+        }
     }
 
     private class ControlledGenerationStream {

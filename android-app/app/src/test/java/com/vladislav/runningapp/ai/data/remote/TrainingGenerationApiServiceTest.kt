@@ -74,9 +74,11 @@ class TrainingGenerationApiServiceTest {
         )
         val completed = events[2] as RemoteTrainingGenerationStreamEventDto.Completed
         assertEquals("mvp.v1", completed.payload.schemaVersion)
-        assertEquals("Интервалы", completed.payload.training.title)
-        assertEquals(2, completed.payload.training.steps.size)
-        assertEquals("run", completed.payload.training.steps[1].type)
+        val training = requireNotNull(completed.payload.training)
+        val steps = requireNotNull(training.steps)
+        assertEquals("Интервалы", training.title)
+        assertEquals(2, steps.size)
+        assertEquals("run", steps[1].type)
 
         val request = server.takeRequest()
         val requestBody = request.body.readUtf8()
