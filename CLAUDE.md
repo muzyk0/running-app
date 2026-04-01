@@ -21,6 +21,12 @@
 - The backend is stateless and only validates, streams progress, and returns one normalized workout envelope
 - Local env files auto-load from `backend/.env` when launched from the repo root, or `.env` when launched from `backend/`
 
+## Localization Notes
+
+- Android user-facing copy should stay in resources, with `android-app/app/src/main/res/values/strings.xml` as the English base locale and `values-ru/strings.xml` as the Russian override using the same keys
+- Android generation requests and TextToSpeech should use the supported app locale resolver instead of hardcoded language tags; Russian locales map to `ru-RU`, all others map to `en-US`
+- Backend request validation accepts only `ru-RU` and `en-US`; prompt instructions plus fallback disclaimer and `voice_prompt` text must stay aligned with the accepted request locale
+
 ## Commands
 
 - `make lint`: shell syntax checks, Go format verification, `go vet`, and Android Gradle smoke validation

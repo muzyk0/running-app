@@ -131,9 +131,9 @@ Replace the current developer-oriented and duplicate Russian copy with real user
 - Modify if needed: `CLAUDE.md`
 - Move: `docs/plans/2026-04-01-user-facing-localization-cleanup.md` to `docs/plans/completed/`
 
-- [ ] Update the API contract to document bilingual locale support, locale-dependent generation behavior, and streamed examples for both supported languages
-- [ ] Update the training schema docs to describe locale-aware fallback disclaimer and `voice_prompt` behavior instead of Russian-only assumptions
-- [ ] Update `README.md` anywhere local validation or generation expectations still imply Russian-only behavior
-- [ ] Update `CLAUDE.md` if internal localization patterns or development workflow expectations change during implementation
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update the API contract to document bilingual locale support, locale-dependent generation behavior, and streamed examples for both supported languages
+- [x] Update the training schema docs to describe locale-aware fallback disclaimer and `voice_prompt` behavior instead of Russian-only assumptions
+- [x] Update `README.md` anywhere local validation or generation expectations still imply Russian-only behavior
+- [x] Update `CLAUDE.md` if internal localization patterns or development workflow expectations change during implementation
+- [x] Move this plan to `docs/plans/completed/`
 ---

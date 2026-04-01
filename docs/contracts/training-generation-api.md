@@ -6,8 +6,10 @@ This document is the authoritative MVP contract between the Android client and t
 
 - Transport format: JSON request bodies over HTTP, `text/event-stream` for successful training generation responses, and JSON for non-streaming errors
 - API versioning: path-based for endpoints and `schema_version` inside the training payload
-- Supported locale for MVP generation requests: `ru-RU`
+- Supported generation locales for MVP: `ru-RU` and `en-US`
 - Backend remains stateless: it generates and returns one normalized workout per request and does not persist user data
+- The accepted request locale is preserved end to end for provider prompting, backend fallback disclaimer text, synthesized `voice_prompt` text, and deterministic static-provider fixtures
+- The Android app derives its request locale from the active app/system locale and maps it onto the supported set before calling the backend: Russian locales resolve to `ru-RU`; all other locales resolve to `en-US`
 
 ## Endpoints
 
@@ -32,7 +34,7 @@ Request headers:
 - `Content-Type: application/json`
 - `Accept: text/event-stream`
 
-Request body:
+Example request body (`request.locale = "en-US"`):
 
 ```json
 {
@@ -47,11 +49,22 @@ Request body:
     "training_goal": "Build consistency",
     "additional_prompt_fields": [
       {
-        "label": "Поверхность",
-        "value": "Стадион или ровный асфальт"
+        "label": "Surface",
+        "value": "Track or flat asphalt"
       }
     ]
   },
+  "request": {
+    "locale": "en-US",
+    "user_note": "Avoid hard accelerations"
+  }
+}
+```
+
+Equivalent Russian requests use the same JSON shape but set `request.locale` to `ru-RU` and may provide Russian free-text fields:
+
+```json
+{
   "request": {
     "locale": "ru-RU",
     "user_note": "Без интенсивных ускорений"
@@ -70,8 +83,14 @@ Field requirements:
 - `profile.injuries_and_limitations`: non-empty string
 - `profile.training_goal`: non-empty string
 - `profile.additional_prompt_fields[]`: optional array of `{label, value}` objects with non-empty strings
-- `request.locale`: required and must be `ru-RU` for MVP
+- `request.locale`: required and must be one of `ru-RU` or `en-US`
 - `request.user_note`: optional string
+
+Locale-dependent behavior:
+
+- `request.locale` controls the expected language for `training.title`, `training.summary`, `training.goal`, `training.disclaimer`, and every step `voice_prompt`
+- If the provider omits `training.disclaimer` or a step `voice_prompt`, the backend synthesizes locale-matched fallback text during normalization
+- Unsupported locales are rejected before streaming starts with a `400 invalid_request` response
 
 Successful response:
 
@@ -87,64 +106,30 @@ Stream event payloads:
 - `completed`: final normalized training payload
 - `error`: terminal generation failure after streaming has started
 
-Example stream:
+Example stream for `request.locale = "en-US"`:
 
 ```text
 event: log
-data: {"message":"Building training prompt"}
+data: {"message":"loading static training template"}
 
 event: log
-data: {"message":"Waiting for provider output"}
+data: {"message":"returning static training payload"}
 
 event: completed
-data: {"schema_version":"mvp.v1","training":{"title":"Базовая интервальная тренировка","summary":"Чередование спокойного бега и ходьбы для безопасного старта тренировки.","goal":"Build consistency","estimated_duration_sec":1020,"disclaimer":"Приложение не является медицинской рекомендацией.","steps":[{"id":"step-1","type":"warmup","duration_sec":300,"voice_prompt":"Пять минут разминки быстрым шагом."},{"id":"step-2","type":"run","duration_sec":120,"voice_prompt":"Две минуты очень легкого бега."},{"id":"step-3","type":"walk","duration_sec":180,"voice_prompt":"Три минуты восстановления шагом."},{"id":"step-4","type":"run","duration_sec":120,"voice_prompt":"Еще две минуты легкого бега."},{"id":"step-5","type":"cooldown","duration_sec":300,"voice_prompt":"Пять минут заминки спокойным шагом."}]}}
+data: {"schema_version":"mvp.v1","training":{"title":"Base interval workout","summary":"Alternating easy running and walking for a safe start to the session.","goal":"Gradually adapt to running load","estimated_duration_sec":1020,"disclaimer":"This app does not provide medical advice.","steps":[{"id":"step-1","type":"warmup","duration_sec":300,"voice_prompt":"Warm up with brisk walking for 5 minutes."},{"id":"step-2","type":"run","duration_sec":120,"voice_prompt":"Run easily for 2 minutes."},{"id":"step-3","type":"walk","duration_sec":180,"voice_prompt":"Recover with walking for 3 minutes."},{"id":"step-4","type":"run","duration_sec":120,"voice_prompt":"Run easily again for 2 minutes."},{"id":"step-5","type":"cooldown","duration_sec":300,"voice_prompt":"Cool down with easy walking for 5 minutes."}]}}
 ```
 
-The `completed` event payload reuses the existing JSON training envelope:
+Example stream for `request.locale = "ru-RU"`:
 
-```json
-{
-  "schema_version": "mvp.v1",
-  "training": {
-    "title": "Базовая интервальная тренировка",
-    "summary": "Чередование спокойного бега и ходьбы для безопасного старта тренировки.",
-    "goal": "Build consistency",
-    "estimated_duration_sec": 1020,
-    "disclaimer": "Приложение не является медицинской рекомендацией.",
-    "steps": [
-      {
-        "id": "step-1",
-        "type": "warmup",
-        "duration_sec": 300,
-        "voice_prompt": "Пять минут разминки быстрым шагом."
-      },
-      {
-        "id": "step-2",
-        "type": "run",
-        "duration_sec": 120,
-        "voice_prompt": "Две минуты очень легкого бега."
-      },
-      {
-        "id": "step-3",
-        "type": "walk",
-        "duration_sec": 180,
-        "voice_prompt": "Три минуты восстановления шагом."
-      },
-      {
-        "id": "step-4",
-        "type": "run",
-        "duration_sec": 120,
-        "voice_prompt": "Еще две минуты легкого бега."
-      },
-      {
-        "id": "step-5",
-        "type": "cooldown",
-        "duration_sec": 300,
-        "voice_prompt": "Пять минут заминки спокойным шагом."
-      }
-    ]
-  }
-}
+```text
+event: log
+data: {"message":"loading static training template"}
+
+event: log
+data: {"message":"returning static training payload"}
+
+event: completed
+data: {"schema_version":"mvp.v1","training":{"title":"Базовая интервальная тренировка","summary":"Чередование спокойного бега и ходьбы для безопасного старта тренировки.","goal":"Постепенная адаптация к беговой нагрузке","estimated_duration_sec":1020,"disclaimer":"Приложение не является медицинской рекомендацией.","steps":[{"id":"step-1","type":"warmup","duration_sec":300,"voice_prompt":"Пять минут разминки быстрым шагом."},{"id":"step-2","type":"run","duration_sec":120,"voice_prompt":"Две минуты очень легкого бега."},{"id":"step-3","type":"walk","duration_sec":180,"voice_prompt":"Три минуты восстановления шагом."},{"id":"step-4","type":"run","duration_sec":120,"voice_prompt":"Еще две минуты легкого бега."},{"id":"step-5","type":"cooldown","duration_sec":300,"voice_prompt":"Пять минут заминки спокойным шагом."}]}}
 ```
 
 Android handling expectations:
@@ -153,6 +138,8 @@ Android handling expectations:
 - keep the workout preview and save actions unavailable until a terminal `completed` event arrives
 - treat the terminal `error` event as the same error envelope used by non-success HTTP responses and stop reading the stream after it
 - treat a stream that closes without `completed` or `error` as an invalid backend response
+- derive the backend `request.locale` from the active app/system locale instead of storing a separate in-app language setting
+- use the same supported locale for TextToSpeech so spoken prompts match the generated workout language
 
 Response guarantees for MVP:
 
@@ -169,6 +156,17 @@ Error response format:
   "error": {
     "code": "invalid_request",
     "message": "profile.training_goal is required"
+  }
+}
+```
+
+Unsupported locale example:
+
+```json
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "request.locale must be one of ru-RU, en-US"
   }
 }
 ```

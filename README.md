@@ -137,6 +137,7 @@ curl -N http://127.0.0.1:8080/v1/trainings/generate \
 ```
 
 Use the same request JSON shape documented in `docs/contracts/training-generation-api.md`. With `RUNNING_APP_PROVIDER=static`, the backend emits deterministic `log` events before the terminal `completed` event, which makes local Android and curl-based smoke tests easier to repeat.
+Manual generation requests must set `request.locale` to `ru-RU` or `en-US`. Any other locale returns `400 invalid_request` before the SSE stream starts. The static provider returns deterministic workout copy in the requested locale, which makes it useful for smoke-testing both Russian and English responses from the same local backend.
 
 ## Android: Local Run
 
@@ -176,6 +177,7 @@ printf '%s\n' \
 
 The Android generation flow now keeps the successful request open as an SSE stream, appends `log` events to the realtime output card, and only reveals the generated workout after the terminal `completed` event arrives. Non-2xx HTTP responses and terminal stream `error` events both surface as generation failures in the app.
 If the backend returns `200 OK` but the stream is empty, malformed, or closes before a terminal event, the Android client treats that as an invalid backend response instead of a successful generation.
+Generation locale follows the active app or system locale. Russian locales resolve to `ru-RU`; all other locales currently resolve to `en-US` for MVP. TextToSpeech uses the same resolved locale so newly generated spoken cues stay aligned with the workout language.
 
 ## Coverage And Validation
 
