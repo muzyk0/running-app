@@ -45,7 +45,9 @@ export JAVA_HOME="$(
 - `make android-coverage`: run only the Android JVM coverage report and threshold gate
 - `make backend-coverage`: run backend tests plus the per-package coverage threshold gate
 - `make android-build`: build the debug APK from `android-app/`
+- `make android-build-release`: build the signed release APK from `android-app/`
 - `make android-install`: install the debug APK to a connected emulator/device
+- `make android-install-release`: install the signed release APK to a connected device
 - `make backend-build`: build `backend/bin/running-app-backend`
 - `make backend-run`: start the backend from `backend/` with local `.env` support
 
@@ -58,12 +60,40 @@ make backend-build
 make backend-run
 make android-build
 make android-install
+make android-build-release
 ```
 
 If you need a non-default Android backend URL:
 
 ```bash
 make android-build TRAINING_API_BASE_URL=http://192.168.1.50:8080/
+```
+
+Release builds read the backend URL from one of these sources, in order:
+
+- `TRAINING_API_BASE_URL` or `TRAINING_API_RELEASE_BASE_URL` passed to `make`
+- `RUNNING_APP_RELEASE_TRAINING_API_BASE_URL` from the environment
+- `runningAppReleaseTrainingApiBaseUrl` in `android-app/local.properties`
+
+The `android-app/local.properties` file is already git-ignored, so it is the cleanest place to keep a private production endpoint. For example:
+
+```properties
+runningAppReleaseTrainingApiBaseUrl=https://api.example.com/
+```
+
+Release signing is read from `android-app/keystore.properties` or `RUNNING_APP_RELEASE_KEYSTORE_*` environment variables. A local `keystore.properties` file looks like this:
+
+```properties
+storeFile=running-app-release.jks
+storePassword=change-me
+keyAlias=runningapprelease
+keyPassword=change-me
+```
+
+Then assemble the signed release APK from the repo root with:
+
+```bash
+make android-build-release
 ```
 
 The backend defaults to `127.0.0.1:8080` and the `codex` provider, so fresh local runs stay bound to loopback instead of every interface. For repeatable local testing without the Codex CLI, use the static provider:
@@ -110,7 +140,7 @@ Use the same request JSON shape documented in `docs/contracts/training-generatio
 
 ## Android: Local Run
 
-The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. The default is `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine. Cleartext traffic is allowed only in debug builds; release builds require an HTTPS backend URL.
+The Android client reads the backend base URL from the Gradle property `runningAppTrainingApiBaseUrl`. `debug` builds default to `http://10.0.2.2:8080/`, which matches an Android emulator talking to a backend running on the host machine. `release` builds read `runningAppReleaseTrainingApiBaseUrl` from `android-app/local.properties`, `RUNNING_APP_RELEASE_TRAINING_API_BASE_URL` from the environment, or an explicit Gradle property override. Cleartext traffic is allowed only in debug builds; release builds require an HTTPS backend URL.
 
 Foreground session tracking features also require granting runtime location permission and, on Android 13+, notification permission.
 
@@ -129,6 +159,19 @@ For a physical device, point the property at a reachable host, for example:
 export RUNNING_APP_HTTP_ADDR=0.0.0.0:8080
 ./gradlew app:assembleDebug \
   -PrunningAppTrainingApiBaseUrl=http://192.168.1.50:8080/
+```
+
+For a production-oriented APK, configure a private HTTPS backend URL and local signing credentials, then build release:
+
+```bash
+cd android-app
+printf '%s\n' 'runningAppReleaseTrainingApiBaseUrl=https://api.example.com/' >> local.properties
+printf '%s\n' \
+  'storeFile=running-app-release.jks' \
+  'storePassword=change-me' \
+  'keyAlias=runningapprelease' \
+  'keyPassword=change-me' >> keystore.properties
+./gradlew app:assembleRelease
 ```
 
 The Android generation flow now keeps the successful request open as an SSE stream, appends `log` events to the realtime output card, and only reveals the generated workout after the terminal `completed` event arrives. Non-2xx HTTP responses and terminal stream `error` events both surface as generation failures in the app.

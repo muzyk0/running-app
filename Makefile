@@ -2,9 +2,11 @@ SHELL := /bin/bash
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR := $(ROOT_DIR)scripts
-TRAINING_API_BASE_URL ?= http://10.0.2.2:8080/
+TRAINING_API_BASE_URL ?=
+TRAINING_API_DEBUG_BASE_URL ?= $(if $(strip $(TRAINING_API_BASE_URL)),$(TRAINING_API_BASE_URL),http://10.0.2.2:8080/)
+TRAINING_API_RELEASE_BASE_URL ?= $(TRAINING_API_BASE_URL)
 
-.PHONY: help format lint test ci coverage android-smoke backend-smoke docker-smoke android-ci backend-ci android-coverage backend-coverage android-build android-install backend-build backend-run
+.PHONY: help format lint test ci coverage android-smoke backend-smoke docker-smoke android-ci backend-ci android-coverage backend-coverage android-build android-build-release android-install android-install-release backend-build backend-run
 
 help:
 	@printf "%s\n" \
@@ -22,12 +24,17 @@ help:
 		"  android-coverage  Run Android coverage script" \
 		"  backend-coverage  Run backend coverage script" \
 		"  android-build     Build debug APK from android-app/" \
+		"  android-build-release  Build signed release APK from android-app/" \
 		"  android-install   Install debug APK via adb" \
+		"  android-install-release  Install signed release APK via adb" \
 		"  backend-build     Build backend binary to backend/bin/running-app-backend" \
 		"  backend-run       Run backend server from backend/" \
 		"" \
 		"Variables:" \
-		"  TRAINING_API_BASE_URL=$(TRAINING_API_BASE_URL)"
+		"  TRAINING_API_BASE_URL=$(TRAINING_API_BASE_URL)" \
+		"  TRAINING_API_DEBUG_BASE_URL=$(TRAINING_API_DEBUG_BASE_URL)" \
+		"  TRAINING_API_RELEASE_BASE_URL=$(TRAINING_API_RELEASE_BASE_URL)" \
+		"  RUNNING_APP_RELEASE_TRAINING_API_BASE_URL=$${RUNNING_APP_RELEASE_TRAINING_API_BASE_URL:-}"
 
 format:
 	@$(SCRIPTS_DIR)/format.sh
@@ -68,10 +75,16 @@ backend-coverage:
 	@$(SCRIPTS_DIR)/backend-coverage.sh
 
 android-build:
-	@TRAINING_API_BASE_URL="$(TRAINING_API_BASE_URL)" $(SCRIPTS_DIR)/android-build.sh
+	@TRAINING_API_BASE_URL="$(TRAINING_API_DEBUG_BASE_URL)" $(SCRIPTS_DIR)/android-build.sh
+
+android-build-release:
+	@TRAINING_API_BASE_URL="$(TRAINING_API_RELEASE_BASE_URL)" $(SCRIPTS_DIR)/android-build-release.sh
 
 android-install:
-	@TRAINING_API_BASE_URL="$(TRAINING_API_BASE_URL)" $(SCRIPTS_DIR)/android-install.sh
+	@TRAINING_API_BASE_URL="$(TRAINING_API_DEBUG_BASE_URL)" $(SCRIPTS_DIR)/android-install.sh
+
+android-install-release:
+	@TRAINING_API_BASE_URL="$(TRAINING_API_RELEASE_BASE_URL)" $(SCRIPTS_DIR)/android-install-release.sh
 
 backend-build:
 	@$(SCRIPTS_DIR)/backend-build.sh

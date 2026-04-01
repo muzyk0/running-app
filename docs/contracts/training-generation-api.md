@@ -206,7 +206,7 @@ Backend runtime settings that affect this contract:
 - `RUNNING_APP_ENV_FILE`: optional explicit dotenv file path; otherwise the backend auto-loads `backend/.env` or `.env` from the working directory when present
 - `RUNNING_APP_CODEX_BINARY`, `RUNNING_APP_CODEX_WORKDIR`, `RUNNING_APP_CODEX_MODEL`, `RUNNING_APP_CODEX_PROFILE`, `RUNNING_APP_CODEX_SANDBOX`: provider-specific Codex CLI settings
 
-For local Android builds, the backend base URL is passed through the Gradle property `runningAppTrainingApiBaseUrl`. The emulator-friendly default remains `http://10.0.2.2:8080/`. Cleartext transport is allowed only in debug builds; release builds must use HTTPS.
+For Android builds, the backend base URL is passed through the Gradle property `runningAppTrainingApiBaseUrl`. The emulator-friendly `debug` default remains `http://10.0.2.2:8080/`. `release` builds must receive an HTTPS endpoint through `runningAppReleaseTrainingApiBaseUrl` in `android-app/local.properties`, `RUNNING_APP_RELEASE_TRAINING_API_BASE_URL` in the environment, or an explicit Gradle property override. Cleartext transport is allowed only in debug builds; release builds must use HTTPS.
 
 ## Deployment Modes
 

@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
@@ -13,8 +14,62 @@ plugins {
     jacoco
 }
 
-val trainingApiBaseUrl = providers.gradleProperty("runningAppTrainingApiBaseUrl")
-    .orElse("http://10.0.2.2:8080/")
+val localTrainingApiBaseUrl = "http://10.0.2.2:8080/"
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.isFile) {
+        keystorePropertiesFile.inputStream().use(::load)
+    }
+}
+fun String?.nullIfBlank(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+val trainingApiBaseUrlOverride = providers.gradleProperty("runningAppTrainingApiBaseUrl").orNull.nullIfBlank()
+val releaseTrainingApiBaseUrl = listOfNotNull(
+    trainingApiBaseUrlOverride,
+    providers.gradleProperty("runningAppReleaseTrainingApiBaseUrl").orNull.nullIfBlank(),
+    providers.environmentVariable("RUNNING_APP_RELEASE_TRAINING_API_BASE_URL").orNull.nullIfBlank(),
+    localProperties.getProperty("runningAppReleaseTrainingApiBaseUrl").nullIfBlank(),
+).firstOrNull()
+val releaseTrainingApiBaseUrlErrorMessage =
+    "Release builds require runningAppReleaseTrainingApiBaseUrl " +
+        "in android-app/local.properties, a RUNNING_APP_RELEASE_TRAINING_API_BASE_URL " +
+        "environment variable, or an explicit -PrunningAppTrainingApiBaseUrl override."
+val releaseTrainingApiBaseUrlFallback = "https://invalid.running-app.example/"
+val releaseKeystorePath = listOfNotNull(
+    providers.gradleProperty("runningAppReleaseKeystoreFile").orNull.nullIfBlank(),
+    providers.environmentVariable("RUNNING_APP_RELEASE_KEYSTORE_FILE").orNull.nullIfBlank(),
+    keystoreProperties.getProperty("storeFile").nullIfBlank(),
+).firstOrNull()
+val releaseKeystorePassword = listOfNotNull(
+    providers.gradleProperty("runningAppReleaseKeystorePassword").orNull.nullIfBlank(),
+    providers.environmentVariable("RUNNING_APP_RELEASE_KEYSTORE_PASSWORD").orNull.nullIfBlank(),
+    keystoreProperties.getProperty("storePassword").nullIfBlank(),
+).firstOrNull()
+val releaseKeyAlias = listOfNotNull(
+    providers.gradleProperty("runningAppReleaseKeyAlias").orNull.nullIfBlank(),
+    providers.environmentVariable("RUNNING_APP_RELEASE_KEY_ALIAS").orNull.nullIfBlank(),
+    keystoreProperties.getProperty("keyAlias").nullIfBlank(),
+).firstOrNull()
+val releaseKeyPassword = listOfNotNull(
+    providers.gradleProperty("runningAppReleaseKeyPassword").orNull.nullIfBlank(),
+    providers.environmentVariable("RUNNING_APP_RELEASE_KEY_PASSWORD").orNull.nullIfBlank(),
+    keystoreProperties.getProperty("keyPassword").nullIfBlank(),
+).firstOrNull()
+val releaseSigningConfigured = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it != null }
+val releaseSigningErrorMessage =
+    "Release signing requires storeFile, storePassword, keyAlias, and keyPassword " +
+        "in android-app/keystore.properties, matching RUNNING_APP_RELEASE_* environment " +
+        "variables, or explicit -PrunningAppRelease* Gradle properties."
 val androidCoverageThreshold = "0.80".toBigDecimal()
 val androidCoverageIncludes = listOf(
     "com/vladislav/runningapp/activity/service/ActivityDistanceCalculator*",
@@ -64,9 +119,40 @@ extensions.configure<ApplicationExtension>("android") {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "TRAINING_API_BASE_URL", "\"${trainingApiBaseUrl.get()}\"")
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseSigningConfigured) {
+                storeFile = rootProject.file(releaseKeystorePath!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            buildConfigField(
+                "String",
+                "TRAINING_API_BASE_URL",
+                "\"${trainingApiBaseUrlOverride ?: localTrainingApiBaseUrl}\"",
+            )
+        }
+
+        getByName("release") {
+            buildConfigField(
+                "String",
+                "TRAINING_API_BASE_URL",
+                "\"${releaseTrainingApiBaseUrl ?: releaseTrainingApiBaseUrlFallback}\"",
+            )
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -104,6 +190,35 @@ jacoco {
 
 kapt {
     correctErrorTypes = true
+}
+
+val validateReleaseTrainingApiBaseUrl = tasks.register("validateReleaseTrainingApiBaseUrl") {
+    group = "verification"
+    description = "Ensures release builds define a training API base URL."
+
+    doLast {
+        check(releaseTrainingApiBaseUrl != null) {
+            releaseTrainingApiBaseUrlErrorMessage
+        }
+    }
+}
+
+val validateReleaseSigning = tasks.register("validateReleaseSigning") {
+    group = "verification"
+    description = "Ensures release builds define signing credentials."
+
+    doLast {
+        check(releaseSigningConfigured) {
+            releaseSigningErrorMessage
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name == "preReleaseBuild" || task.name == "generateReleaseBuildConfig"
+}.configureEach {
+    dependsOn(validateReleaseTrainingApiBaseUrl)
+    dependsOn(validateReleaseSigning)
 }
 
 tasks.withType<Test>().configureEach {
