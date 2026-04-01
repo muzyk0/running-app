@@ -118,9 +118,9 @@ Replace the current developer-oriented and duplicate Russian copy with real user
 - Modify if coverage includes need adjustment: `android-app/app/build.gradle.kts`
 - Modify CI scripts only if validation gaps are discovered: `scripts/`
 
-- [ ] Run full test suite with repo CI entrypoints: `make ci`
-- [ ] Run linter: `make lint`
-- [ ] Run coverage verification and confirm the project still meets the 80% threshold: `make coverage`
+- [x] Run full test suite with repo CI entrypoints: `make ci`
+- [x] Run linter: `make lint`
+- [x] Run coverage verification and confirm the project still meets the 80% threshold: `make coverage`
 
 ### Task 6: Update Documentation
 

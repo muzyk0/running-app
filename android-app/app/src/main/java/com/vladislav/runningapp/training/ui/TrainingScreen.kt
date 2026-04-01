@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import com.vladislav.runningapp.core.i18n.formatWorkoutDurationLabel
 import com.vladislav.runningapp.training.domain.Workout
 import com.vladislav.runningapp.training.domain.WorkoutStep
 import com.vladislav.runningapp.training.domain.WorkoutStepType
+import java.util.Locale
 
 @Composable
 fun TrainingScreen(
@@ -51,7 +53,9 @@ fun TrainingScreen(
     viewModel: TrainingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val configuration = LocalConfiguration.current
     val resources = LocalContext.current.resources
+    val currentLocale = if (configuration.locales.isEmpty) Locale.getDefault() else configuration.locales[0]
     val duplicateTitle = uiState.selectedWorkout?.let { workout ->
         buildDuplicateWorkoutTitle(
             sourceTitle = workout.title,
@@ -59,7 +63,7 @@ fun TrainingScreen(
             defaultTitle = stringResource(R.string.training_title_new_workout_default),
             duplicatePattern = resources.getString(R.string.training_title_duplicate_pattern),
             numberedDuplicatePattern = resources.getString(R.string.training_title_duplicate_numbered_pattern),
-            locale = resources.configuration.locales[0],
+            locale = currentLocale,
         )
     }
 
