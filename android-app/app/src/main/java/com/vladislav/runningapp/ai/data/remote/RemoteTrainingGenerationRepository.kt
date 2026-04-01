@@ -7,6 +7,7 @@ import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
 import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationRepository
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
+import com.vladislav.runningapp.core.i18n.AppLocaleResolver
 import com.vladislav.runningapp.profile.UserProfile
 import java.io.IOException
 import javax.inject.Inject
@@ -23,6 +24,7 @@ internal const val GeneratedWorkoutPreviewId = "generated-preview"
 class DefaultTrainingGenerationRepository @Inject constructor(
     private val apiService: TrainingGenerationApiService,
     private val gson: Gson,
+    private val appLocaleResolver: AppLocaleResolver,
 ) : TrainingGenerationRepository {
     override fun generateWorkout(
         profile: UserProfile,
@@ -30,7 +32,12 @@ class DefaultTrainingGenerationRepository @Inject constructor(
     ): Flow<TrainingGenerationUpdate> = flow {
         var streamResponseStarted = false
         try {
-            val response = apiService.generateTraining(profile.toGenerateTrainingRequestDto(userNote))
+            val response = apiService.generateTraining(
+                profile.toGenerateTrainingRequestDto(
+                    userNote = userNote,
+                    locale = appLocaleResolver.currentSupportedLocale(),
+                ),
+            )
             if (!response.isSuccessful) {
                 emit(
                     TrainingGenerationUpdate.Failure(

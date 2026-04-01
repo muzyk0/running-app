@@ -85,11 +85,11 @@ Replace the current developer-oriented and duplicate Russian copy with real user
 - Modify: `android-app/app/src/test/java/com/vladislav/runningapp/ai/data/remote/RemoteTrainingGenerationRepositoryTest.kt`
 - Create as needed: `android-app/app/src/test/java/com/vladislav/runningapp/session/audio/`
 
-- [ ] Derive the generation request locale from the current Android app/system locale instead of always sending `ru-RU`
-- [ ] Replace fixed-locale UI copy on the generation screen with user-facing locale-aware text that matches supported behavior
-- [ ] Initialize TextToSpeech with the active locale so newly generated English and Russian voice prompts are spoken with the correct voice settings
-- [ ] Add or update tests for locale selection, request serialization, and any new locale resolver/helper used by generation or TTS
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest` - must pass before task 4
+- [x] Derive the generation request locale from the current Android app/system locale instead of always sending `ru-RU`
+- [x] Replace fixed-locale UI copy on the generation screen with user-facing locale-aware text that matches supported behavior
+- [x] Initialize TextToSpeech with the active locale so newly generated English and Russian voice prompts are spoken with the correct voice settings
+- [x] Add or update tests for locale selection, request serialization, and any new locale resolver/helper used by generation or TTS
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest` - must pass before task 4
 
 ### Task 4: Extend The Backend Locale Contract And Fallback Copy To `en-US`
 

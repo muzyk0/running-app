@@ -85,7 +85,7 @@ class TrainingGenerationApiServiceTest {
         assertEquals("POST", request.method)
         assertEquals("/v1/trainings/generate", request.path)
         assertEquals("text/event-stream", request.getHeader("Accept"))
-        assertTrue(requestBody.contains("\"locale\":\"ru-RU\""))
+        assertTrue(requestBody.contains("\"locale\":\"en-US\""))
         assertTrue(requestBody.contains("\"training_goal\":\"Build consistency\""))
     }
 
@@ -143,7 +143,7 @@ private fun sampleGenerateTrainingRequestDto(): GenerateTrainingRequestDto = Gen
         ),
     ),
     request = GenerateTrainingRequestContextDto(
-        locale = "ru-RU",
-        userNote = "Без ускорений",
+        locale = "en-US",
+        userNote = "No sprints",
     ),
 )

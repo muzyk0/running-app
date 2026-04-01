@@ -114,10 +114,10 @@
     <string name="generation_profile_snapshot_title">Profile snapshot</string>
     <string name="generation_profile_additional_fields_count">%1$d extra details</string>
     <string name="generation_request_title">Generation options</string>
-    <string name="generation_request_body">The workout language is fixed for now. Leave the note blank if your profile already covers everything.</string>
+    <string name="generation_request_body">Workout language follows your app language. English (United States) and Russian are supported right now, and other locales fall back to English. Leave the note blank if your profile already covers everything.</string>
     <string name="generation_user_note_label">Workout note</string>
     <string name="generation_user_note_hint">For example: no sprints, track only, short cooldown</string>
-    <string name="generation_locale_fixed">Language: ru-RU</string>
+    <string name="generation_locale_fixed">Language: %1$s</string>
     <string name="generation_generate_action">Generate workout</string>
     <string name="generation_generating_status">Generating...</string>
     <string name="generation_error_title">Could not generate a workout</string>

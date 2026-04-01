@@ -4,11 +4,14 @@ import com.google.gson.Gson
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
 import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
+import com.vladislav.runningapp.core.i18n.AppLocaleResolver
+import com.vladislav.runningapp.core.i18n.SupportedAppLocale
 import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.profile.UserSex
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -30,6 +33,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 ): Response<ResponseBody> = Response.success(successfulStreamBody())
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = "  без спринтов  ").toList()
@@ -63,6 +67,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 )
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -83,6 +88,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 ): Response<ResponseBody> = Response.success(errorStreamBody())
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -110,6 +116,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 )
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -146,6 +153,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 )
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -169,6 +177,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 )
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -187,6 +196,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 ): Response<ResponseBody> = Response.success(null as ResponseBody?)
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -212,6 +222,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 )
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -231,6 +242,7 @@ class RemoteTrainingGenerationRepositoryTest {
                 }
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         val updates = repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
@@ -250,9 +262,42 @@ class RemoteTrainingGenerationRepositoryTest {
                 }
             },
             gson = Gson(),
+            appLocaleResolver = appLocaleResolver(),
         )
 
         repository.generateWorkout(profile = sampleUserProfile(), userNote = null).toList()
+    }
+
+    @Test
+    fun usesResolvedLocaleForGenerationRequest() = runTest {
+        var capturedRequest: GenerateTrainingRequestDto? = null
+        val repository = DefaultTrainingGenerationRepository(
+            apiService = object : TrainingGenerationApiService {
+                override suspend fun generateTraining(
+                    request: GenerateTrainingRequestDto,
+                ): Response<ResponseBody> {
+                    capturedRequest = request
+                    return Response.error(
+                        400,
+                        """
+                        {
+                          "error": {
+                            "code": "invalid_request",
+                            "message": "profile.training_goal is required"
+                          }
+                        }
+                        """.trimIndent().toResponseBody("application/json".toMediaType()),
+                    )
+                }
+            },
+            gson = Gson(),
+            appLocaleResolver = appLocaleResolver("en-GB"),
+        )
+
+        repository.generateWorkout(profile = sampleUserProfile(), userNote = "  keep it easy  ").toList()
+
+        assertEquals("en-US", capturedRequest?.request?.locale)
+        assertEquals("keep it easy", capturedRequest?.request?.userNote)
     }
 }
 
@@ -320,3 +365,7 @@ private fun errorStreamBody(): ResponseBody = """
     data: {"error":{"code":"request_timeout","message":"generation timed out"}}
 
     """.trimIndent().toResponseBody("text/event-stream".toMediaType())
+
+private fun appLocaleResolver(
+    languageTag: String = SupportedAppLocale.Russian.languageTag,
+): AppLocaleResolver = AppLocaleResolver(Locale.forLanguageTag(languageTag))

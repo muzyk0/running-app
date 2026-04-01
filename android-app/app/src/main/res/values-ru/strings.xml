@@ -114,10 +114,10 @@
     <string name="generation_profile_snapshot_title">Данные профиля</string>
     <string name="generation_profile_additional_fields_count">%1$d дополнительных деталей</string>
     <string name="generation_request_title">Параметры подбора</string>
-    <string name="generation_request_body">Язык тренировки пока фиксирован. Если профиля достаточно, поле с пожеланием можно оставить пустым.</string>
+    <string name="generation_request_body">Язык тренировки следует за языком приложения. Сейчас поддерживаются английский (США) и русский, а остальные локали переключаются на английский. Если профиля достаточно, поле с пожеланием можно оставить пустым.</string>
     <string name="generation_user_note_label">Пожелание к тренировке</string>
     <string name="generation_user_note_hint">Например: без ускорений, только стадион, короткая заминка</string>
-    <string name="generation_locale_fixed">Язык: ru-RU</string>
+    <string name="generation_locale_fixed">Язык: %1$s</string>
     <string name="generation_generate_action">Подобрать тренировку</string>
     <string name="generation_generating_status">Подбираем...</string>
     <string name="generation_error_title">Не удалось подобрать тренировку</string>

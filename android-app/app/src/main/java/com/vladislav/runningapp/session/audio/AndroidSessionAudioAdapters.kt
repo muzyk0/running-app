@@ -5,14 +5,15 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.speech.tts.TextToSpeech
 import androidx.core.content.ContextCompat
+import com.vladislav.runningapp.core.i18n.AppLocaleResolver
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AndroidTextToSpeechSpeaker @Inject constructor(
     @ApplicationContext context: Context,
+    private val appLocaleResolver: AppLocaleResolver,
 ) : VoiceCueSpeaker {
     private val appContext = context.applicationContext
     private val mainExecutor = ContextCompat.getMainExecutor(appContext)
@@ -38,6 +39,7 @@ class AndroidTextToSpeechSpeaker @Inject constructor(
         }
 
         mainExecutor.execute {
+            engine.setLanguage(appLocaleResolver.currentSupportedLocale().locale)
             val result = engine.speak(
                 prompt,
                 TextToSpeech.QUEUE_FLUSH,
@@ -62,7 +64,7 @@ class AndroidTextToSpeechSpeaker @Inject constructor(
             }
             textToSpeech = TextToSpeech(appContext) { status ->
                 readiness = if (status == TextToSpeech.SUCCESS) {
-                    textToSpeech?.setLanguage(Locale.forLanguageTag("ru-RU"))
+                    textToSpeech?.setLanguage(appLocaleResolver.currentSupportedLocale().locale)
                     Readiness.Ready
                 } else {
                     Readiness.Failed

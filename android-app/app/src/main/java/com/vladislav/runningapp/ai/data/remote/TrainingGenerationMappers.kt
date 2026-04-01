@@ -4,6 +4,7 @@ import com.vladislav.runningapp.ai.domain.TrainingGenerationError
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
 import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
+import com.vladislav.runningapp.core.i18n.SupportedAppLocale
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
 import com.vladislav.runningapp.training.domain.Workout
@@ -14,6 +15,7 @@ import com.vladislav.runningapp.training.domain.toDomainWorkout
 
 internal fun UserProfile.toGenerateTrainingRequestDto(
     userNote: String?,
+    locale: SupportedAppLocale,
 ): GenerateTrainingRequestDto = GenerateTrainingRequestDto(
     profile = GenerateTrainingProfileDto(
         heightCm = heightCm,
@@ -32,7 +34,7 @@ internal fun UserProfile.toGenerateTrainingRequestDto(
         },
     ),
     request = GenerateTrainingRequestContextDto(
-        locale = "ru-RU",
+        locale = locale.languageTag,
         userNote = userNote?.trim()?.takeIf { value -> value.isNotEmpty() },
     ),
 )

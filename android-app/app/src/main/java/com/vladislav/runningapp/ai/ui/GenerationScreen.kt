@@ -34,6 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.i18n.asString
+import com.vladislav.runningapp.core.i18n.currentSupportedLocaleDisplayName
 import com.vladislav.runningapp.core.i18n.formatWorkoutDurationLabel
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
@@ -276,6 +277,8 @@ private fun RequestCard(
     onUserNoteChanged: (String) -> Unit,
     onGenerateWorkout: () -> Unit,
 ) {
+    val localeDisplayName = currentSupportedLocaleDisplayName()
+
     Card {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -309,7 +312,14 @@ private fun RequestCard(
             ) {
                 AssistChip(
                     onClick = {},
-                    label = { Text(text = stringResource(R.string.generation_locale_fixed)) },
+                    label = {
+                        Text(
+                            text = stringResource(
+                                R.string.generation_locale_fixed,
+                                localeDisplayName,
+                            ),
+                        )
+                    },
                 )
                 Button(
                     onClick = onGenerateWorkout,

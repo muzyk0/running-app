@@ -1,5 +1,6 @@
 package com.vladislav.runningapp.ai.data.remote
 
+import com.vladislav.runningapp.core.i18n.SupportedAppLocale
 import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
@@ -27,7 +28,10 @@ class TrainingGenerationMappersTest {
             ),
         )
 
-        val dto = profile.toGenerateTrainingRequestDto(userNote = "Без ускорений")
+        val dto = profile.toGenerateTrainingRequestDto(
+            userNote = "Без ускорений",
+            locale = SupportedAppLocale.EnglishUs,
+        )
 
         assertEquals(180, dto.profile.heightCm)
         assertEquals("male", dto.profile.sex)
@@ -35,7 +39,7 @@ class TrainingGenerationMappersTest {
         assertEquals("Build consistency", dto.profile.trainingGoal)
         assertEquals("Поверхность", dto.profile.additionalPromptFields.single().label)
         assertEquals("Стадион", dto.profile.additionalPromptFields.single().value)
-        assertEquals("ru-RU", dto.request.locale)
+        assertEquals("en-US", dto.request.locale)
         assertEquals("Без ускорений", dto.request.userNote)
     }
 
