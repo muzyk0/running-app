@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.asString
+import com.vladislav.runningapp.core.i18n.formatWorkoutDurationLabel
 import com.vladislav.runningapp.profile.FitnessLevel
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.profile.UserSex
@@ -120,7 +122,7 @@ private fun GenerationScreen(
         state.streamErrorMessage?.let { message ->
             ErrorCard(
                 title = stringResource(R.string.generation_stream_error_title),
-                message = message,
+                message = message.asString(),
                 onDismiss = onDismissError,
             )
         }
@@ -128,7 +130,7 @@ private fun GenerationScreen(
         state.errorMessage?.let { message ->
             ErrorCard(
                 title = stringResource(R.string.generation_error_title),
-                message = message,
+                message = message.asString(),
                 onDismiss = onDismissError,
             )
         }
@@ -437,7 +439,7 @@ private fun GeneratedWorkoutPreviewCard(
             Text(
                 text = stringResource(
                     R.string.generation_preview_meta,
-                    formatDuration(workout.estimatedDurationSec),
+                    formatWorkoutDurationLabel(workout.estimatedDurationSec),
                     workout.steps.size,
                     workout.schemaVersion,
                 ),
@@ -516,7 +518,7 @@ private fun GeneratedWorkoutStepCard(
                 text = stringResource(
                     R.string.training_step_detail_meta,
                     stringResource(step.type.labelRes()),
-                    formatDuration(step.durationSec),
+                    formatWorkoutDurationLabel(step.durationSec),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -567,14 +569,4 @@ private fun WorkoutStepType.labelRes(): Int = when (this) {
     WorkoutStepType.Walk -> R.string.training_step_type_walk
     WorkoutStepType.Cooldown -> R.string.training_step_type_cooldown
     WorkoutStepType.Rest -> R.string.training_step_type_rest
-}
-
-private fun formatDuration(totalDurationSec: Int): String {
-    val minutes = totalDurationSec / 60
-    val seconds = totalDurationSec % 60
-    return when {
-        minutes > 0 && seconds > 0 -> "$minutes мин $seconds с"
-        minutes > 0 -> "$minutes мин"
-        else -> "$seconds с"
-    }
 }

@@ -1,9 +1,11 @@
 package com.vladislav.runningapp.training.ui
 
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.activity.ActivitySessionType
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.ActivityTrackerState
 import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.PermissionRequirementsState
 import com.vladislav.runningapp.core.permissions.RequirementState
@@ -51,7 +53,7 @@ class TrainingViewModelTest {
         viewModel.onStartSelectedWorkout()
         assertTrue(tracker.startedWorkouts.isEmpty())
         assertEquals(
-            "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
+            uiText(R.string.training_error_start_while_active),
             viewModel.uiState.value.errorMessage,
         )
     }
@@ -77,7 +79,7 @@ class TrainingViewModelTest {
         assertNotNull(editorState)
         assertFalse(requireNotNull(editorState).isSaving)
         assertEquals(
-            "Не удалось сохранить тренировку локально. Повторите попытку.",
+            uiText(R.string.training_error_save_failed),
             viewModel.uiState.value.errorMessage,
         )
     }
@@ -95,11 +97,11 @@ class TrainingViewModelTest {
         )
 
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
-        viewModel.onSaveCopyOfSelectedWorkout()
+        viewModel.onSaveCopyOfSelectedWorkout("Интервалы для старта (копия)")
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(
-            "Не удалось создать копию тренировки локально. Повторите попытку.",
+            uiText(R.string.training_error_duplicate_failed),
             viewModel.uiState.value.errorMessage,
         )
     }
@@ -201,7 +203,7 @@ class TrainingViewModelTest {
 
         assertTrue(repository.deletedWorkoutIds.isEmpty())
         assertEquals(
-            "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+            uiText(R.string.training_error_delete_active),
             viewModel.uiState.value.errorMessage,
         )
         assertEquals(null, viewModel.uiState.value.pendingDeleteWorkoutId)

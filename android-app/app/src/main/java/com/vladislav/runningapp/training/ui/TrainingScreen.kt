@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -35,6 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.asString
+import com.vladislav.runningapp.core.i18n.formatWorkoutDurationLabel
 import com.vladislav.runningapp.training.domain.Workout
 import com.vladislav.runningapp.training.domain.WorkoutStep
 import com.vladislav.runningapp.training.domain.WorkoutStepType
@@ -47,6 +51,17 @@ fun TrainingScreen(
     viewModel: TrainingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val resources = LocalContext.current.resources
+    val duplicateTitle = uiState.selectedWorkout?.let { workout ->
+        buildDuplicateWorkoutTitle(
+            sourceTitle = workout.title,
+            existingTitles = uiState.workouts.map { savedWorkout -> savedWorkout.title }.toSet(),
+            defaultTitle = stringResource(R.string.training_title_new_workout_default),
+            duplicatePattern = resources.getString(R.string.training_title_duplicate_pattern),
+            numberedDuplicatePattern = resources.getString(R.string.training_title_duplicate_numbered_pattern),
+            locale = resources.configuration.locales[0],
+        )
+    }
 
     LaunchedEffect(focusedWorkoutId) {
         focusedWorkoutId?.takeIf { workoutId -> workoutId.isNotBlank() }?.let(viewModel::onFocusWorkout)
@@ -68,7 +83,7 @@ fun TrainingScreen(
         onRequestDeleteWorkout = viewModel::onRequestDeleteSelectedWorkout,
         onDismissDeleteWorkout = viewModel::onDismissDeleteWorkout,
         onConfirmDeleteWorkout = viewModel::onConfirmDeleteWorkout,
-        onSaveCopy = viewModel::onSaveCopyOfSelectedWorkout,
+        onSaveCopy = { duplicateTitle?.let(viewModel::onSaveCopyOfSelectedWorkout) },
         onStartWorkout = viewModel::onStartSelectedWorkout,
         onTitleChanged = viewModel::onTitleChanged,
         onSummaryChanged = viewModel::onSummaryChanged,
@@ -142,7 +157,7 @@ private fun TrainingScreen(
             onCreateWorkout = onCreateWorkout,
         )
         state.errorMessage?.let { message ->
-            InlineErrorCard(message = message)
+            InlineErrorCard(message = message.asString())
         }
 
         if (state.workouts.isNotEmpty()) {
@@ -285,7 +300,7 @@ private fun WorkoutListCard(
                         Text(
                             text = stringResource(
                                 R.string.training_list_item_meta,
-                                formatDuration(workout.estimatedDurationSec),
+                                formatWorkoutDurationLabel(workout.estimatedDurationSec),
                                 workout.steps.size,
                                 workout.schemaVersion,
                             ),
@@ -365,7 +380,7 @@ private fun WorkoutDetailCard(
                         text = stringResource(
                             R.string.training_detail_meta,
                             workout.schemaVersion,
-                            formatDuration(workout.estimatedDurationSec),
+                            formatWorkoutDurationLabel(workout.estimatedDurationSec),
                             workout.steps.size,
                         ),
                         style = MaterialTheme.typography.bodyMedium,
@@ -375,7 +390,7 @@ private fun WorkoutDetailCard(
                 AssistChip(
                     onClick = {},
                     label = {
-                        Text(text = formatDuration(workout.estimatedDurationSec))
+                        Text(text = formatWorkoutDurationLabel(workout.estimatedDurationSec))
                     },
                 )
             }
@@ -486,7 +501,7 @@ private fun WorkoutEditorCard(
                 text = stringResource(
                     R.string.training_editor_meta,
                     state.schemaVersion,
-                    formatDuration(state.totalDurationSec),
+                    formatWorkoutDurationLabel(state.totalDurationSec),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -640,7 +655,7 @@ private fun WorkoutStepDetailCard(
                 text = stringResource(
                     R.string.training_step_detail_meta,
                     stringResource(step.type.labelRes()),
-                    formatDuration(step.durationSec),
+                    formatWorkoutDurationLabel(step.durationSec),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -700,7 +715,7 @@ private fun TrainingTextInput(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    error: String? = null,
+    error: UiText? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     singleLine: Boolean = true,
 ) {
@@ -725,10 +740,10 @@ private fun TrainingTextInput(
 
 @Composable
 private fun ValidationText(
-    error: String,
+    error: UiText,
 ) {
     Text(
-        text = error,
+        text = error.asString(),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
     )
@@ -772,14 +787,4 @@ private fun WorkoutStepType.labelRes(): Int = when (this) {
     WorkoutStepType.Walk -> R.string.training_step_type_walk
     WorkoutStepType.Cooldown -> R.string.training_step_type_cooldown
     WorkoutStepType.Rest -> R.string.training_step_type_rest
-}
-
-private fun formatDuration(totalDurationSec: Int): String {
-    val minutes = totalDurationSec / 60
-    val seconds = totalDurationSec % 60
-    return when {
-        minutes > 0 && seconds > 0 -> "$minutes мин $seconds с"
-        minutes > 0 -> "$minutes мин"
-        else -> "$seconds с"
-    }
 }

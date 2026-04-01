@@ -2,9 +2,12 @@ package com.vladislav.runningapp.training.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
 import com.vladislav.runningapp.core.di.DefaultDispatcher
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import com.vladislav.runningapp.training.WorkoutRepository
@@ -26,7 +29,7 @@ data class TrainingUiState(
     val selectedWorkoutId: String? = null,
     val editorState: WorkoutEditorState? = null,
     val pendingDeleteWorkoutId: String? = null,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isStartingWorkout: Boolean = false,
     val shouldOpenActiveSession: Boolean = false,
 ) {
@@ -123,7 +126,7 @@ class TrainingViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(
                     pendingDeleteWorkoutId = null,
-                    errorMessage = "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+                    errorMessage = uiText(R.string.training_error_delete_active),
                 )
             }
             return
@@ -151,7 +154,7 @@ class TrainingViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(
                     pendingDeleteWorkoutId = null,
-                    errorMessage = "Нельзя удалить тренировку, пока она запущена. Сначала завершите активную сессию.",
+                    errorMessage = uiText(R.string.training_error_delete_active),
                 )
             }
             return
@@ -173,21 +176,18 @@ class TrainingViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         pendingDeleteWorkoutId = null,
-                        errorMessage = "Не удалось удалить тренировку локально. Повторите попытку.",
+                        errorMessage = uiText(R.string.training_error_delete_failed),
                     )
                 }
             }
         }
     }
 
-    fun onSaveCopyOfSelectedWorkout() {
+    fun onSaveCopyOfSelectedWorkout(duplicateTitle: String) {
         val selectedWorkout = _uiState.value.selectedWorkout ?: return
         val duplicatedWorkout = selectedWorkout.copy(
             id = UUID.randomUUID().toString(),
-            title = buildDuplicateWorkoutTitle(
-                sourceTitle = selectedWorkout.title,
-                existingTitles = _uiState.value.workouts.map { workout -> workout.title }.toSet(),
-            ),
+            title = duplicateTitle,
         )
         viewModelScope.launch(defaultDispatcher) {
             runCatching {
@@ -204,7 +204,7 @@ class TrainingViewModel @Inject constructor(
                     throw error
                 }
                 _uiState.update { state ->
-                    state.copy(errorMessage = "Не удалось создать копию тренировки локально. Повторите попытку.")
+                    state.copy(errorMessage = uiText(R.string.training_error_duplicate_failed))
                 }
             }
         }
@@ -218,7 +218,7 @@ class TrainingViewModel @Inject constructor(
         if (activityTracker.trackerState.value.isTracking) {
             _uiState.update { state ->
                 state.copy(
-                    errorMessage = "Сначала завершите текущую активную сессию, затем запускайте сохраненную тренировку.",
+                    errorMessage = uiText(R.string.training_error_start_while_active),
                 )
             }
             return
@@ -304,7 +304,7 @@ class TrainingViewModel @Inject constructor(
                                 action = WorkoutEditorAction.SetSaving(false),
                             )
                         },
-                        errorMessage = "Не удалось сохранить тренировку локально. Повторите попытку.",
+                        errorMessage = uiText(R.string.training_error_save_failed),
                     )
                 }
             }

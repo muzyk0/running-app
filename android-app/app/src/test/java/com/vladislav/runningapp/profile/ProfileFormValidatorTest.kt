@@ -1,7 +1,8 @@
 package com.vladislav.runningapp.profile
 
+import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.uiText
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -48,14 +49,14 @@ class ProfileFormValidatorTest {
 
         assertTrue(result.errors.hasErrors)
         assertNull(result.profile)
-        assertNotNull(result.errors.heightCm)
-        assertNotNull(result.errors.weightKg)
-        assertNotNull(result.errors.sex)
-        assertNotNull(result.errors.age)
-        assertNotNull(result.errors.trainingDaysPerWeek)
-        assertNotNull(result.errors.fitnessLevel)
-        assertNotNull(result.errors.injuriesAndLimitations)
-        assertNotNull(result.errors.trainingGoal)
+        assertEquals(uiText(R.string.profile_validation_height_required), result.errors.heightCm)
+        assertEquals(uiText(R.string.profile_validation_weight_required), result.errors.weightKg)
+        assertEquals(uiText(R.string.profile_validation_sex_required), result.errors.sex)
+        assertEquals(uiText(R.string.profile_validation_age_required), result.errors.age)
+        assertEquals(uiText(R.string.profile_validation_training_days_required), result.errors.trainingDaysPerWeek)
+        assertEquals(uiText(R.string.profile_validation_fitness_level_required), result.errors.fitnessLevel)
+        assertEquals(uiText(R.string.profile_validation_injuries_required), result.errors.injuriesAndLimitations)
+        assertEquals(uiText(R.string.profile_validation_goal_required), result.errors.trainingGoal)
     }
 
     @Test
@@ -79,7 +80,10 @@ class ProfileFormValidatorTest {
         assertTrue(result.errors.hasErrors)
         assertNull(result.profile)
         assertEquals(1, result.errors.additionalPromptFields.size)
-        assertNotNull(result.errors.additionalPromptFields.first().value)
+        assertEquals(
+            uiText(R.string.profile_validation_additional_field_value_required),
+            result.errors.additionalPromptFields.first().value,
+        )
     }
 
     private fun assertFalse(value: Boolean) {

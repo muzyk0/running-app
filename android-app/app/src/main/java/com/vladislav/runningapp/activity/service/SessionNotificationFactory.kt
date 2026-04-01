@@ -53,8 +53,8 @@ class SessionNotificationFactory @Inject constructor(
         }
         val content = context.getString(
             R.string.active_session_notification_content,
-            formatDurationLabel(state.durationSec),
-            formatDistanceLabel(state.distanceMeters),
+            formatDurationLabel(context.resources, state.durationSec),
+            formatDistanceLabel(context.resources, state.distanceMeters),
         )
 
         return NotificationCompat.Builder(context, ActiveSessionNotificationChannelId)

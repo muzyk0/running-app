@@ -1,9 +1,13 @@
 package com.vladislav.runningapp.training.ui
 
+import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
 import com.vladislav.runningapp.training.domain.Workout
 import com.vladislav.runningapp.training.domain.WorkoutStep
 import com.vladislav.runningapp.training.domain.WorkoutStepType
+import java.util.Locale
 
 data class WorkoutStepDraft(
     val type: WorkoutStepType = WorkoutStepType.Warmup,
@@ -12,16 +16,16 @@ data class WorkoutStepDraft(
 )
 
 data class WorkoutStepValidationErrors(
-    val durationSec: String? = null,
-    val voicePrompt: String? = null,
+    val durationSec: UiText? = null,
+    val voicePrompt: UiText? = null,
 ) {
     val hasErrors: Boolean
         get() = durationSec != null || voicePrompt != null
 }
 
 data class WorkoutEditorValidationErrors(
-    val title: String? = null,
-    val stepsMessage: String? = null,
+    val title: UiText? = null,
+    val stepsMessage: UiText? = null,
     val stepErrors: List<WorkoutStepValidationErrors> = emptyList(),
 ) {
     val hasErrors: Boolean
@@ -135,13 +139,13 @@ object WorkoutEditorReducer {
 object WorkoutEditorValidator {
     fun validate(state: WorkoutEditorState): WorkoutEditorValidationErrors {
         val titleError = if (state.title.trim().isBlank()) {
-            "Укажите название тренировки."
+            uiText(R.string.training_validation_title_required)
         } else {
             null
         }
 
         val stepsMessage = if (state.steps.isEmpty()) {
-            "Добавьте хотя бы один шаг."
+            uiText(R.string.training_validation_steps_required)
         } else {
             null
         }
@@ -150,7 +154,7 @@ object WorkoutEditorValidator {
             WorkoutStepValidationErrors(
                 durationSec = validateDuration(step.durationSec),
                 voicePrompt = if (step.voicePrompt.trim().isBlank()) {
-                    "Добавьте голосовую подсказку."
+                    uiText(R.string.training_validation_step_voice_prompt_required)
                 } else {
                     null
                 },
@@ -164,11 +168,11 @@ object WorkoutEditorValidator {
         )
     }
 
-    private fun validateDuration(value: String): String? {
+    private fun validateDuration(value: String): UiText? {
         val parsed = value.trim().toIntOrNull()
         return when {
-            value.trim().isBlank() -> "Укажите длительность шага."
-            parsed == null || parsed <= 0 -> "Длительность должна быть больше 0 секунд."
+            value.trim().isBlank() -> uiText(R.string.training_validation_step_duration_required)
+            parsed == null || parsed <= 0 -> uiText(R.string.training_validation_step_duration_invalid)
             else -> null
         }
     }
@@ -209,16 +213,25 @@ fun Workout.toEditorState(): WorkoutEditorState = WorkoutEditorState(
 fun buildDuplicateWorkoutTitle(
     sourceTitle: String,
     existingTitles: Set<String>,
+    defaultTitle: String,
+    duplicatePattern: String,
+    numberedDuplicatePattern: String,
+    locale: Locale = Locale.getDefault(),
 ): String {
-    val normalizedSourceTitle = sourceTitle.trim().ifBlank { "Новая тренировка" }
-    val firstCandidate = "$normalizedSourceTitle (копия)"
+    val normalizedSourceTitle = sourceTitle.trim().ifBlank { defaultTitle }
+    val firstCandidate = String.format(locale, duplicatePattern, normalizedSourceTitle)
     if (firstCandidate !in existingTitles) {
         return firstCandidate
     }
 
     var copyNumber = 2
     while (true) {
-        val candidate = "$normalizedSourceTitle (копия $copyNumber)"
+        val candidate = String.format(
+            locale,
+            numberedDuplicatePattern,
+            normalizedSourceTitle,
+            copyNumber,
+        )
         if (candidate !in existingTitles) {
             return candidate
         }

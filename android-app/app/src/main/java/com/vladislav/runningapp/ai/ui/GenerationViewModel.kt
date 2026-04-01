@@ -3,9 +3,14 @@ package com.vladislav.runningapp.ai.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
+import com.vladislav.runningapp.ai.domain.TrainingGenerationError
+import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
 import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.di.DefaultDispatcher
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.profile.ProfileRepository
 import com.vladislav.runningapp.profile.UserProfile
 import com.vladislav.runningapp.training.WorkoutRepository
@@ -38,10 +43,10 @@ data class GenerationUiState(
     val userNote: String = "",
     val generationPhase: GenerationPhase = GenerationPhase.Idle,
     val generationOutput: String = "",
-    val streamErrorMessage: String? = null,
+    val streamErrorMessage: UiText? = null,
     val generatedWorkout: Workout? = null,
     val savedWorkoutId: String? = null,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isSaving: Boolean = false,
 ) {
     val isGenerating: Boolean
@@ -116,7 +121,7 @@ class GenerationViewModel @Inject constructor(
         val profile = currentState.profile
         if (profile == null) {
             _uiState.update { state ->
-                state.copy(errorMessage = "Сначала заполните профиль, иначе backend не сможет собрать тренировку.")
+                state.copy(errorMessage = uiText(R.string.generation_error_profile_required))
             }
             return
         }
@@ -166,7 +171,7 @@ class GenerationViewModel @Inject constructor(
                                         generationPhase = GenerationPhase.Idle,
                                         generatedWorkout = null,
                                         savedWorkoutId = null,
-                                        errorMessage = update.error.message,
+                                        errorMessage = update.error.toUiText(update.source),
                                         streamErrorMessage = null,
                                     )
 
@@ -176,7 +181,7 @@ class GenerationViewModel @Inject constructor(
                                         generatedWorkout = null,
                                         savedWorkoutId = null,
                                         errorMessage = null,
-                                        streamErrorMessage = update.error.message,
+                                        streamErrorMessage = update.error.toUiText(update.source),
                                     )
                             }
                         }
@@ -220,11 +225,35 @@ class GenerationViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         isSaving = false,
-                        errorMessage = "Не удалось сохранить тренировку локально. Повторите попытку.",
+                        errorMessage = uiText(R.string.generation_error_save_failed),
                     )
                 }
             }
         }
+    }
+}
+
+private fun TrainingGenerationError.toUiText(
+    source: TrainingGenerationFailureSource,
+): UiText = when (source) {
+    TrainingGenerationFailureSource.Request -> when (code) {
+        TrainingGenerationErrorCode.InvalidRequest -> uiText(R.string.generation_error_request_invalid)
+        TrainingGenerationErrorCode.InvalidResponse -> uiText(R.string.generation_error_response_unsupported)
+        TrainingGenerationErrorCode.Network -> uiText(R.string.generation_error_connection)
+        TrainingGenerationErrorCode.ServiceUnavailable -> uiText(R.string.generation_error_service_unavailable)
+        TrainingGenerationErrorCode.ProviderError -> uiText(R.string.generation_error_provider_failed)
+        TrainingGenerationErrorCode.Timeout -> uiText(R.string.generation_error_timeout)
+        TrainingGenerationErrorCode.Unknown -> uiText(R.string.generation_error_unknown)
+    }
+
+    TrainingGenerationFailureSource.Stream -> when (code) {
+        TrainingGenerationErrorCode.Network -> uiText(R.string.generation_error_connection)
+        TrainingGenerationErrorCode.ServiceUnavailable -> uiText(R.string.generation_error_service_unavailable)
+        TrainingGenerationErrorCode.ProviderError -> uiText(R.string.generation_error_provider_failed)
+        TrainingGenerationErrorCode.Timeout -> uiText(R.string.generation_error_timeout)
+        TrainingGenerationErrorCode.InvalidRequest -> uiText(R.string.generation_error_request_invalid)
+        TrainingGenerationErrorCode.InvalidResponse,
+        TrainingGenerationErrorCode.Unknown -> uiText(R.string.generation_error_response_processing)
     }
 }
 

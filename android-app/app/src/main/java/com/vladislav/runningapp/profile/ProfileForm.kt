@@ -1,5 +1,9 @@
 package com.vladislav.runningapp.profile
 
+import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.uiText
+
 data class AdditionalPromptFieldDraft(
     val label: String = "",
     val value: String = "",
@@ -35,22 +39,22 @@ fun UserProfile.toDraft(): ProfileDraft = ProfileDraft(
 )
 
 data class AdditionalPromptFieldValidationErrors(
-    val label: String? = null,
-    val value: String? = null,
+    val label: UiText? = null,
+    val value: UiText? = null,
 ) {
     val hasErrors: Boolean
         get() = label != null || value != null
 }
 
 data class ProfileValidationErrors(
-    val heightCm: String? = null,
-    val weightKg: String? = null,
-    val sex: String? = null,
-    val age: String? = null,
-    val trainingDaysPerWeek: String? = null,
-    val fitnessLevel: String? = null,
-    val injuriesAndLimitations: String? = null,
-    val trainingGoal: String? = null,
+    val heightCm: UiText? = null,
+    val weightKg: UiText? = null,
+    val sex: UiText? = null,
+    val age: UiText? = null,
+    val trainingDaysPerWeek: UiText? = null,
+    val fitnessLevel: UiText? = null,
+    val injuriesAndLimitations: UiText? = null,
+    val trainingGoal: UiText? = null,
     val additionalPromptFields: List<AdditionalPromptFieldValidationErrors> = emptyList(),
 ) {
     val hasErrors: Boolean
@@ -86,13 +90,13 @@ object ProfileFormValidator {
 
                 label.isBlank() -> {
                     additionalFieldErrors += AdditionalPromptFieldValidationErrors(
-                        label = "Добавьте название поля.",
+                        label = uiText(R.string.profile_validation_additional_field_label_required),
                     )
                 }
 
                 value.isBlank() -> {
                     additionalFieldErrors += AdditionalPromptFieldValidationErrors(
-                        value = "Заполните значение поля.",
+                        value = uiText(R.string.profile_validation_additional_field_value_required),
                     )
                 }
 
@@ -110,44 +114,44 @@ object ProfileFormValidator {
             heightCm = validateIntField(
                 value = draft.heightCm,
                 range = 50..300,
-                emptyMessage = "Укажите рост в сантиметрах.",
-                invalidMessage = "Рост должен быть от 50 до 300 см.",
+                emptyMessage = uiText(R.string.profile_validation_height_required),
+                invalidMessage = uiText(R.string.profile_validation_height_invalid),
             ).error,
             weightKg = validateIntField(
                 value = draft.weightKg,
                 range = 20..400,
-                emptyMessage = "Укажите вес в килограммах.",
-                invalidMessage = "Вес должен быть от 20 до 400 кг.",
+                emptyMessage = uiText(R.string.profile_validation_weight_required),
+                invalidMessage = uiText(R.string.profile_validation_weight_invalid),
             ).error,
             sex = if (draft.sex == null) {
-                "Выберите пол."
+                uiText(R.string.profile_validation_sex_required)
             } else {
                 null
             },
             age = validateIntField(
                 value = draft.age,
                 range = 10..120,
-                emptyMessage = "Укажите возраст.",
-                invalidMessage = "Возраст должен быть от 10 до 120 лет.",
+                emptyMessage = uiText(R.string.profile_validation_age_required),
+                invalidMessage = uiText(R.string.profile_validation_age_invalid),
             ).error,
             trainingDaysPerWeek = validateIntField(
                 value = draft.trainingDaysPerWeek,
                 range = 1..7,
-                emptyMessage = "Укажите количество тренировок в неделю.",
-                invalidMessage = "Количество тренировок должно быть от 1 до 7.",
+                emptyMessage = uiText(R.string.profile_validation_training_days_required),
+                invalidMessage = uiText(R.string.profile_validation_training_days_invalid),
             ).error,
             fitnessLevel = if (draft.fitnessLevel == null) {
-                "Выберите уровень подготовки."
+                uiText(R.string.profile_validation_fitness_level_required)
             } else {
                 null
             },
             injuriesAndLimitations = validateTextField(
                 value = draft.injuriesAndLimitations,
-                emptyMessage = "Опишите ограничения и травмы.",
+                emptyMessage = uiText(R.string.profile_validation_injuries_required),
             ),
             trainingGoal = validateTextField(
                 value = draft.trainingGoal,
-                emptyMessage = "Опишите цель тренировок.",
+                emptyMessage = uiText(R.string.profile_validation_goal_required),
             ),
             additionalPromptFields = additionalFieldErrors,
         )
@@ -172,14 +176,14 @@ object ProfileFormValidator {
     }
 
     private data class IntValidation(
-        val error: String? = null,
+        val error: UiText? = null,
     )
 
     private fun validateIntField(
         value: String,
         range: IntRange,
-        emptyMessage: String,
-        invalidMessage: String,
+        emptyMessage: UiText,
+        invalidMessage: UiText,
     ): IntValidation {
         val trimmed = value.trim()
         if (trimmed.isBlank()) {
@@ -196,8 +200,8 @@ object ProfileFormValidator {
 
     private fun validateTextField(
         value: String,
-        emptyMessage: String,
-    ): String? = if (value.trim().isBlank()) {
+        emptyMessage: UiText,
+    ): UiText? = if (value.trim().isBlank()) {
         emptyMessage
     } else {
         null

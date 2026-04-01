@@ -1,6 +1,8 @@
 package com.vladislav.runningapp.profile
 
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.datastore.DisclaimerPreferenceStore
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +40,7 @@ class ProfileViewModelTest {
         assertNull(viewModel.uiState.value.savedProfile)
         assertFalse(viewModel.uiState.value.isSaving)
         assertEquals(
-            "Не удалось сохранить профиль локально. Повторите попытку.",
+            uiText(R.string.profile_error_save_failed),
             viewModel.uiState.value.errorMessage,
         )
     }

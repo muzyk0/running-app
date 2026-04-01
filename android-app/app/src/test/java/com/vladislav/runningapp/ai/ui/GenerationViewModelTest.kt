@@ -1,11 +1,13 @@
 package com.vladislav.runningapp.ai.ui
 
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.ai.domain.GenerateWorkoutUseCase
 import com.vladislav.runningapp.ai.domain.TrainingGenerationError
 import com.vladislav.runningapp.ai.domain.TrainingGenerationErrorCode
 import com.vladislav.runningapp.ai.domain.TrainingGenerationFailureSource
 import com.vladislav.runningapp.ai.domain.TrainingGenerationRepository
 import com.vladislav.runningapp.ai.domain.TrainingGenerationUpdate
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.core.startup.MainDispatcherRule
 import com.vladislav.runningapp.profile.AdditionalPromptField
 import com.vladislav.runningapp.profile.FitnessLevel
@@ -121,7 +123,7 @@ class GenerationViewModelTest {
         assertFalse(viewModel.uiState.value.isGenerating)
         assertEquals("", viewModel.uiState.value.generationOutput)
         assertNull(viewModel.uiState.value.generatedWorkout)
-        assertEquals("provider failed", viewModel.uiState.value.streamErrorMessage)
+        assertEquals(uiText(R.string.generation_error_provider_failed), viewModel.uiState.value.streamErrorMessage)
         assertFalse(viewModel.uiState.value.canSaveGeneratedWorkout)
     }
 
@@ -148,7 +150,7 @@ class GenerationViewModelTest {
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals("Building training prompt", viewModel.uiState.value.generationOutput)
-        assertEquals("provider failed", viewModel.uiState.value.streamErrorMessage)
+        assertEquals(uiText(R.string.generation_error_provider_failed), viewModel.uiState.value.streamErrorMessage)
         assertFalse(viewModel.uiState.value.isGenerating)
         assertFalse(viewModel.uiState.value.isWorkoutReady)
         assertNull(viewModel.uiState.value.generatedWorkout)
@@ -175,7 +177,7 @@ class GenerationViewModelTest {
         viewModel.onGenerateWorkout()
         mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals("profile.training_goal is required", viewModel.uiState.value.errorMessage)
+        assertEquals(uiText(R.string.generation_error_request_invalid), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.streamErrorMessage)
         assertFalse(viewModel.uiState.value.shouldShowGenerationOutput)
         assertFalse(viewModel.uiState.value.isGenerating)
@@ -274,7 +276,7 @@ class GenerationViewModelTest {
         viewModel.onGenerateWorkout()
 
         assertEquals(
-            "Сначала заполните профиль, иначе backend не сможет собрать тренировку.",
+            uiText(R.string.generation_error_profile_required),
             viewModel.uiState.value.errorMessage,
         )
     }
@@ -297,7 +299,7 @@ class GenerationViewModelTest {
 
         assertTrue(workoutRepository.savedWorkouts.isEmpty())
         assertEquals(
-            "Не удалось сохранить тренировку локально. Повторите попытку.",
+            uiText(R.string.generation_error_save_failed),
             viewModel.uiState.value.errorMessage,
         )
         assertFalse(viewModel.uiState.value.isSaving)

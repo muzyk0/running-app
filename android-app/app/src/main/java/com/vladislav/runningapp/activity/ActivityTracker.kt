@@ -1,5 +1,7 @@
 package com.vladislav.runningapp.activity
 
+import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.training.domain.Workout
 import kotlinx.coroutines.flow.StateFlow
 
@@ -13,5 +15,5 @@ interface ActivityTracker {
     fun stopActiveSession()
 }
 
-const val TrackedSessionStartFailureMessage =
-    "Не удалось запустить активную сессию. Проверьте точную геолокацию и повторите попытку."
+val TrackedSessionStartFailureMessage =
+    uiText(R.string.activity_error_tracked_session_start_failed)

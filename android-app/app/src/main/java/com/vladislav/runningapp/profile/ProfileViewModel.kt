@@ -2,8 +2,11 @@ package com.vladislav.runningapp.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vladislav.runningapp.R
 import com.vladislav.runningapp.core.datastore.DisclaimerPreferenceStore
 import com.vladislav.runningapp.core.di.DefaultDispatcher
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.uiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -32,7 +35,7 @@ data class ProfileUiState(
     val isDisclaimerAccepted: Boolean = false,
     val shouldShowDisclaimerDialog: Boolean = false,
     val isSaving: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 ) {
     val isOnboarding: Boolean
         get() = savedProfile == null
@@ -223,7 +226,7 @@ class ProfileViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         isSaving = false,
-                        errorMessage = "Не удалось сохранить профиль локально. Повторите попытку.",
+                        errorMessage = uiText(R.string.profile_error_save_failed),
                     )
                 }
             }

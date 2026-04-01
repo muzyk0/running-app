@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.vladislav.runningapp.activity.ActivityTracker
 import com.vladislav.runningapp.activity.ActivityTrackerState
 import com.vladislav.runningapp.activity.TrackedSessionStartFailureMessage
+import com.vladislav.runningapp.core.i18n.UiText
 import com.vladislav.runningapp.core.permissions.MissingTrackedSessionPermissionsMessage
 import com.vladislav.runningapp.core.permissions.TrackingPermissionChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,7 @@ import kotlinx.coroutines.launch
 
 data class FreeRunUiState(
     val trackerState: ActivityTrackerState = ActivityTrackerState(),
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isStarting: Boolean = false,
 )
 
@@ -27,7 +28,7 @@ class FreeRunViewModel @Inject constructor(
     private val activityTracker: ActivityTracker,
     private val trackingPermissionChecker: TrackingPermissionChecker,
 ) : ViewModel() {
-    private val errorMessage = MutableStateFlow<String?>(null)
+    private val errorMessage = MutableStateFlow<UiText?>(null)
     private val isStarting = MutableStateFlow(false)
 
     val uiState: StateFlow<FreeRunUiState> = combine(

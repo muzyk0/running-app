@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.asString
 
 @Composable
 fun ProfileScreen(
@@ -106,7 +108,7 @@ private fun ProfileScreen(
             isEditing = state.isEditing,
         )
         state.errorMessage?.let { message ->
-            InlineErrorCard(message = message)
+            InlineErrorCard(message = message.asString())
         }
         DisclaimerStatusCard(
             isAccepted = state.isDisclaimerAccepted,
@@ -486,7 +488,7 @@ private fun AdditionalPromptFieldsSection(
 @Composable
 private fun <T> ChoiceSection(
     title: String,
-    error: String?,
+    error: UiText?,
     options: List<T>,
     selected: T?,
     optionLabelRes: (T) -> Int,
@@ -516,7 +518,7 @@ private fun <T> ChoiceSection(
         }
         if (error != null) {
             Text(
-                text = error,
+                text = error.asString(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -529,7 +531,7 @@ private fun ProfileTextInput(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    error: String? = null,
+    error: UiText? = null,
     singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
@@ -544,7 +546,7 @@ private fun ProfileTextInput(
         isError = error != null,
         supportingText = {
             if (error != null) {
-                Text(text = error)
+                Text(text = error.asString())
             }
         },
     )

@@ -1,9 +1,12 @@
 package com.vladislav.runningapp.training.ui
 
+import com.vladislav.runningapp.R
+import com.vladislav.runningapp.core.i18n.uiText
 import com.vladislav.runningapp.training.domain.DefaultWorkoutSchemaVersion
 import com.vladislav.runningapp.training.domain.Workout
 import com.vladislav.runningapp.training.domain.WorkoutStep
 import com.vladislav.runningapp.training.domain.WorkoutStepType
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,22 +70,26 @@ class WorkoutEditorReducerTest {
         )
 
         assertTrue(errors.hasErrors)
-        assertEquals("Укажите название тренировки.", errors.title)
-        assertEquals("Добавьте хотя бы один шаг.", errors.stepsMessage)
+        assertEquals(uiText(R.string.training_validation_title_required), errors.title)
+        assertEquals(uiText(R.string.training_validation_steps_required), errors.stepsMessage)
     }
 
     @Test
     fun buildDuplicateWorkoutTitleAddsIncrementingSuffix() {
         val title = buildDuplicateWorkoutTitle(
-            sourceTitle = "Интервалы",
+            sourceTitle = "Intervals",
             existingTitles = setOf(
-                "Интервалы",
-                "Интервалы (копия)",
-                "Интервалы (копия 2)",
+                "Intervals",
+                "Intervals (copy)",
+                "Intervals (copy 2)",
             ),
+            defaultTitle = "New workout",
+            duplicatePattern = "%1\$s (copy)",
+            numberedDuplicatePattern = "%1\$s (copy %2\$d)",
+            locale = Locale.US,
         )
 
-        assertEquals("Интервалы (копия 3)", title)
+        assertEquals("Intervals (copy 3)", title)
     }
 
     private fun sampleWorkout(): Workout = Workout(

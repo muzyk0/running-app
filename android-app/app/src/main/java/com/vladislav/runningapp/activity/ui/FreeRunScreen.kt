@@ -27,6 +27,8 @@ import com.vladislav.runningapp.activity.ActivityTrackerState
 import com.vladislav.runningapp.activity.formatDistanceLabel
 import com.vladislav.runningapp.activity.formatDurationLabel
 import com.vladislav.runningapp.activity.formatPaceLabel
+import com.vladislav.runningapp.core.i18n.UiText
+import com.vladislav.runningapp.core.i18n.asString
 
 @Composable
 fun FreeRunScreen(
@@ -50,7 +52,7 @@ fun FreeRunScreen(
 @Composable
 private fun FreeRunScreen(
     state: ActivityTrackerState,
-    errorMessage: String?,
+    errorMessage: UiText?,
     isStarting: Boolean,
     canStartTrackedSessions: Boolean,
     onStartFreeRun: () -> Unit,
@@ -65,7 +67,7 @@ private fun FreeRunScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         errorMessage?.let { message ->
-            InlineErrorCard(message = message)
+            InlineErrorCard(message = message.asString())
         }
 
         Card {

@@ -66,11 +66,11 @@ Replace the current developer-oriented and duplicate Russian copy with real user
 - Create as needed: `android-app/app/src/main/java/com/vladislav/runningapp/core/i18n/`
 - Modify or create tests under: `android-app/app/src/test/java/com/vladislav/runningapp/profile/`, `android-app/app/src/test/java/com/vladislav/runningapp/training/ui/`, `android-app/app/src/test/java/com/vladislav/runningapp/ai/ui/`, `android-app/app/src/test/java/com/vladislav/runningapp/activity/`
 
-- [ ] Replace inline Russian validation and failure strings with locale-independent message state that can be resolved through Android resources in the UI layer
-- [ ] Extract shared locale-aware duration, distance, and pace formatting instead of embedding `мин`, `с`, `км`, `м`, and similar Russian text directly in Kotlin
-- [ ] Update screens and view models so user-facing failures no longer expose raw developer/backend wording where a friendlier message should be shown
-- [ ] Add or update unit tests for validation states, formatter output, and view-model error mapping after the hardcoded strings are removed
-- [ ] Run `cd android-app && ./gradlew app:testDebugUnitTest` - must pass before task 3
+- [x] Replace inline Russian validation and failure strings with locale-independent message state that can be resolved through Android resources in the UI layer
+- [x] Extract shared locale-aware duration, distance, and pace formatting instead of embedding `мин`, `с`, `км`, `м`, and similar Russian text directly in Kotlin
+- [x] Update screens and view models so user-facing failures no longer expose raw developer/backend wording where a friendlier message should be shown
+- [x] Add or update unit tests for validation states, formatter output, and view-model error mapping after the hardcoded strings are removed
+- [x] Run `cd android-app && ./gradlew app:testDebugUnitTest` - must pass before task 3
 
 ### Task 3: Make Android Generation Requests And TTS Follow The Active Locale
 
