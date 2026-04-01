@@ -40,6 +40,7 @@ data class GenerationUiState(
     val generationOutput: String = "",
     val streamErrorMessage: String? = null,
     val generatedWorkout: Workout? = null,
+    val savedWorkoutId: String? = null,
     val errorMessage: String? = null,
     val isSaving: Boolean = false,
 ) {
@@ -53,7 +54,7 @@ data class GenerationUiState(
         get() = profile != null && !isLoadingProfile && !isGenerating && !isSaving
 
     val canSaveGeneratedWorkout: Boolean
-        get() = isWorkoutReady && !isSaving
+        get() = isWorkoutReady && savedWorkoutId == null && !isSaving
 
     val shouldShowGenerationOutput: Boolean
         get() = isGenerating || generationOutput.isNotBlank() || streamErrorMessage != null || isWorkoutReady
@@ -129,6 +130,7 @@ class GenerationViewModel @Inject constructor(
                 generationOutput = "",
                 streamErrorMessage = null,
                 generatedWorkout = null,
+                savedWorkoutId = null,
                 errorMessage = null,
             )
         }
@@ -149,6 +151,7 @@ class GenerationViewModel @Inject constructor(
                             state.copy(
                                 generationPhase = GenerationPhase.Completed,
                                 generatedWorkout = update.workout,
+                                savedWorkoutId = null,
                                 streamErrorMessage = null,
                                 errorMessage = null,
                             )
@@ -162,6 +165,7 @@ class GenerationViewModel @Inject constructor(
                                     state.copy(
                                         generationPhase = GenerationPhase.Idle,
                                         generatedWorkout = null,
+                                        savedWorkoutId = null,
                                         errorMessage = update.error.message,
                                         streamErrorMessage = null,
                                     )
@@ -170,6 +174,7 @@ class GenerationViewModel @Inject constructor(
                                     state.copy(
                                         generationPhase = GenerationPhase.Idle,
                                         generatedWorkout = null,
+                                        savedWorkoutId = null,
                                         errorMessage = null,
                                         streamErrorMessage = update.error.message,
                                     )
@@ -182,8 +187,9 @@ class GenerationViewModel @Inject constructor(
     }
 
     fun onAcceptGeneratedWorkout() {
-        val generatedWorkout = _uiState.value.generatedWorkout ?: return
-        if (_uiState.value.isSaving) {
+        val currentState = _uiState.value
+        val generatedWorkout = currentState.generatedWorkout ?: return
+        if (currentState.isSaving || currentState.savedWorkoutId != null) {
             return
         }
 
@@ -203,6 +209,7 @@ class GenerationViewModel @Inject constructor(
                     state.copy(
                         isSaving = false,
                         generatedWorkout = savedWorkout,
+                        savedWorkoutId = savedWorkout.id,
                     )
                 }
                 _navigationEvents.emit(GenerationNavigationEvent.OpenSavedWorkout(savedWorkout.id))

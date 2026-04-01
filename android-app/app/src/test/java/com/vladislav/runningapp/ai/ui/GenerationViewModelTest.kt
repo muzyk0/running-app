@@ -231,6 +231,31 @@ class GenerationViewModelTest {
         assertEquals(event.workoutId, savedWorkout.id)
         assertTrue(viewModel.uiState.value.generatedWorkout != null)
         assertTrue(viewModel.uiState.value.isWorkoutReady)
+        assertFalse(viewModel.uiState.value.canSaveGeneratedWorkout)
+        assertEquals(savedWorkout.id, viewModel.uiState.value.savedWorkoutId)
+    }
+
+    @Test
+    fun ignoresRepeatedSaveRequestsAfterGeneratedWorkoutWasSaved() = runTest(mainDispatcherRule.dispatcher) {
+        val workoutRepository = FakeWorkoutRepository()
+        val viewModel = createViewModel(
+            repository = SingleShotTrainingGenerationRepository(
+                flowOf(TrainingGenerationUpdate.Completed(sampleGeneratedWorkout())),
+            ),
+            workoutRepository = workoutRepository,
+        )
+
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onGenerateWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onAcceptGeneratedWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onAcceptGeneratedWorkout()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, workoutRepository.savedWorkouts.size)
+        assertFalse(viewModel.uiState.value.canSaveGeneratedWorkout)
     }
 
     @Test
